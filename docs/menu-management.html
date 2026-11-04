@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canteen Connect — Menu Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --code-bg: #eaf0ee;
+    --phase: #6d28d9;
+    --phase-soft: #f0ebff;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514;
+      --surface: #151f1d;
+      --ink: #e5eeec;
+      --muted: #94a8a2;
+      --line: #25352f;
+      --accent: #5eead4;
+      --accent-soft: #123430;
+      --warn: #fbbf24;
+      --warn-soft: #302509;
+      --code-bg: #101a18;
+      --phase: #a78bfa;
+      --phase-soft: #1e1538;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514;
+    --surface: #151f1d;
+    --ink: #e5eeec;
+    --muted: #94a8a2;
+    --line: #25352f;
+    --accent: #5eead4;
+    --accent-soft: #123430;
+    --warn: #fbbf24;
+    --warn-soft: #302509;
+    --code-bg: #101a18;
+    --phase: #a78bfa;
+    --phase-soft: #1e1538;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--font-body);
+    padding-inline: 16px;
+    padding-block: 24px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    nav.toc { position: static; }
+    nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+  nav.toc { position: sticky; top: 16px; align-self: start; padding-top: 8px; font-size: 14px; }
+  nav.toc p { margin: 0 0 8px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+
+  main { min-width: 0; }
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font: 600 18px/1.3 var(--font-display); margin: 28px 0 8px; }
+  h4 { font: 600 15px/1.3 var(--font-display); margin: 20px 0 6px; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  section { padding-block: 40px 8px; border-top: 1px solid var(--line); margin-top: 32px; scroll-margin-top: 16px; }
+  header.top + section { margin-top: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; max-width: 72ch; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+
+  code { font: 500 .88em var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; font: 400 13.5px/1.55 var(--font-mono); }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .scroll { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.phase { background: var(--phase-soft); color: var(--phase); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 18px; max-width: 72ch; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .cols > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .cols h3 { margin-top: 0; }
+  .cols p:last-child, .cols ul:last-child { margin-bottom: 0; }
+
+  .fn { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px 6px; margin: 0 0 16px; }
+  .fn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+  .fn > header code { font-size: 15px; background: none; padding: 0; color: var(--accent); }
+  .fn p { max-width: none; }
+  .fn .k { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+  .fn pre { margin-top: 4px; }
+
+  ol.trace { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; margin: 0 0 18px; max-width: none; }
+  ol.trace li { counter-increment: s; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  ol.trace li::before { content: counter(s); font: 600 14px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  ol.trace li > div > :last-child { margin-bottom: 0; }
+  ol.trace b { display: block; margin-bottom: 2px; }
+
+  .phase-banner { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; padding: 14px 18px; background: var(--phase-soft); border: 1px solid var(--phase); border-radius: 8px; }
+  .phase-banner .num { font: 700 28px/1 var(--font-display); color: var(--phase); }
+  .phase-banner .title { font: 600 18px/1.2 var(--font-display); color: var(--ink); }
+  .phase-banner .desc { font-size: 14px; color: var(--muted); margin: 2px 0 0; }
+
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 0 0 20px; }
+  .diagram svg { display: block; min-width: 720px; width: 100%; height: auto; }
+
+  .jwt { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .jwt > div { min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px 14px; }
+  .jwt h4 { margin: 0 0 6px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .jwt pre { margin: 0; border: 0; padding: 0; background: none; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#phases">Phase roadmap</a></li>
+      <li><a href="#schema">Database schema</a></li>
+      <li><a href="#phase1">Phase 1: entities + seed</a></li>
+      <li><a href="#phase2">Phase 2: menu API</a></li>
+      <li><a href="#phase3">Phase 3: daily stock API</a></li>
+      <li><a href="#phase4">Phase 4: admin frontend</a></li>
+      <li><a href="#phase5">Phase 5: employee menu view</a></li>
+      <li><a href="#files">Files changed</a></li>
+      <li><a href="#security">Security + access</a></li>
+      <li><a href="#next">What comes next</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">company-canteen &middot; menu management</p>
+      <h1>Building the menu</h1>
+      <p class="lede">Phase-by-phase guide to adding menu items, daily stock control, and the pages that let admins manage them and employees browse today's food. Every entity, every endpoint, every component.</p>
+    </header>
+
+    <!-- ================================================================ -->
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>With login done, the next thing to build is the <strong>menu</strong>. A canteen menu has two layers: a permanent catalogue of items the kitchen can make (MenuItem), and a daily selection that says which of those items are available today and how many servings remain (DailyStock). Admin users manage both; employees see only today's available items.</p>
+      <div class="cols">
+        <div>
+          <h3>MenuItem <span class="chip plain">catalogue</span></h3>
+          <p>A dish the canteen offers. Has a name, description, price, category (veg, non-veg, beverage, snack), and an image URL. Admins create, edit, and soft-delete items. Items persist across days.</p>
+        </div>
+        <div>
+          <h3>DailyStock <span class="chip plain">today's availability</span></h3>
+          <p>Links a MenuItem to a specific date. Holds the quantity available and how many have been ordered. When quantity hits zero, the item shows as sold out. A background job can reset stock each morning.</p>
+        </div>
+        <div>
+          <h3>Roles <span class="chip plain">access control</span></h3>
+          <p><strong>Admin</strong> can create/edit/delete menu items and set daily stock. <strong>Employee</strong> can only browse today's menu and place orders. The existing JWT already carries the <code>Role</code> claim.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phases">
+      <h2>Phase roadmap</h2>
+      <p>The work is split into five phases. Each phase is self-contained: it compiles, its endpoints work, and it can be tested before moving on.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>#</th><th>Phase</th><th>What it delivers</th><th>New files</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip phase">1</span></td><td>Entities + seed data</td><td>MenuItem and DailyStock EF Core entities, updated DbContext, seed data for testing</td><td>MenuItem.cs, DailyStock.cs</td></tr>
+          <tr><td><span class="chip phase">2</span></td><td>Menu API</td><td>MenuController with CRUD endpoints for menu items (admin only)</td><td>MenuController.cs, MenuItemDto.cs</td></tr>
+          <tr><td><span class="chip phase">3</span></td><td>Daily stock API</td><td>StockController for setting and querying today's available items</td><td>StockController.cs</td></tr>
+          <tr><td><span class="chip phase">4</span></td><td>Admin frontend</td><td>React pages for managing menu items and setting daily stock</td><td>MenuPage.tsx, StockPage.tsx, api/menu.ts</td></tr>
+          <tr><td><span class="chip phase">5</span></td><td>Employee menu view</td><td>Today's menu page that employees see after login</td><td>TodayMenuPage.tsx</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note">
+        <p>Each phase builds on the previous one. Phase 1 is pure backend models. Phases 2&ndash;3 add the API. Phases 4&ndash;5 add the UI. You can test each backend phase with curl or the OpenAPI explorer at <code>/openapi/v1.json</code> before writing any frontend code.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="schema">
+      <h2>Database schema</h2>
+      <p>Two new tables join the existing <code>Users</code> table in <code>canteen.db</code>.</p>
+
+      <h3>MenuItems table</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>Id</code></td><td>int</td><td>PK, auto-increment</td><td>Unique identifier</td></tr>
+          <tr><td><code>Name</code></td><td>string</td><td>required, max 100</td><td>Dish name ("Paneer Tikka")</td></tr>
+          <tr><td><code>Description</code></td><td>string</td><td>max 500</td><td>Short description</td></tr>
+          <tr><td><code>Price</code></td><td>decimal</td><td>required, precision(8,2)</td><td>Price in rupees</td></tr>
+          <tr><td><code>Category</code></td><td>string</td><td>required</td><td>Veg, NonVeg, Beverage, Snack</td></tr>
+          <tr><td><code>ImageUrl</code></td><td>string?</td><td>nullable</td><td>Optional dish photo URL</td></tr>
+          <tr><td><code>IsActive</code></td><td>bool</td><td>default true</td><td>Soft-delete flag</td></tr>
+          <tr><td><code>CreatedAt</code></td><td>DateTime</td><td>default UtcNow</td><td>When it was added</td></tr>
+          <tr><td><code>UpdatedAt</code></td><td>DateTime</td><td>default UtcNow</td><td>Last edit timestamp</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>DailyStock table</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>Id</code></td><td>int</td><td>PK, auto-increment</td><td>Unique identifier</td></tr>
+          <tr><td><code>MenuItemId</code></td><td>int</td><td>FK &rarr; MenuItems.Id</td><td>Which dish</td></tr>
+          <tr><td><code>Date</code></td><td>DateOnly</td><td>required</td><td>Which day this stock is for</td></tr>
+          <tr><td><code>QuantityAvailable</code></td><td>int</td><td>required, &ge; 0</td><td>Total servings set by admin</td></tr>
+          <tr><td><code>QuantityOrdered</code></td><td>int</td><td>default 0</td><td>Servings claimed by orders</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note">
+        <p>A unique index on <code>(MenuItemId, Date)</code> ensures the same dish cannot appear twice on the same day. <code>QuantityOrdered</code> is incremented when an order is placed (built in the ordering phase, not here).</p>
+      </div>
+
+      <h3>Entity relationship</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 780 200" role="img" aria-label="ER diagram showing Users, MenuItems, and DailyStock tables">
+          <defs>
+            <marker id="fk" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--accent)"/></marker>
+          </defs>
+          <rect x="20" y="30" width="200" height="140" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+          <text x="120" y="56" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--ink)">Users</text>
+          <text x="36" y="78" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Id (PK)</text>
+          <text x="36" y="96" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Email (unique)</text>
+          <text x="36" y="114" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Name, PasswordHash</text>
+          <text x="36" y="132" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Role, CreatedAt</text>
+          <text x="120" y="160" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent)">existing</text>
+
+          <rect x="290" y="30" width="200" height="140" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+          <text x="390" y="56" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--ink)">MenuItems</text>
+          <text x="306" y="78" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Id (PK)</text>
+          <text x="306" y="96" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Name, Description</text>
+          <text x="306" y="114" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Price, Category</text>
+          <text x="306" y="132" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">ImageUrl, IsActive</text>
+          <text x="390" y="160" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--phase)">phase 1</text>
+
+          <rect x="560" y="30" width="200" height="140" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+          <text x="660" y="56" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--ink)">DailyStock</text>
+          <text x="576" y="78" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Id (PK)</text>
+          <text x="576" y="96" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">MenuItemId (FK)</text>
+          <text x="576" y="114" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Date</text>
+          <text x="576" y="132" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">QtyAvailable, QtyOrdered</text>
+          <text x="660" y="160" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--phase)">phase 1</text>
+
+          <path d="M490 100 H558" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#fk)"/>
+          <text x="524" y="92" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent)">1 : N</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase1">
+      <h2>Phase 1: Entities + seed data</h2>
+      <div class="phase-banner">
+        <div class="num">1</div>
+        <div><div class="title">EF Core models and seed data</div><div class="desc">Add MenuItem and DailyStock entities, update the DbContext, seed sample items for testing.</div></div>
+      </div>
+
+      <h3>New file: Models/MenuItem.cs</h3>
+      <div class="fn">
+        <header><code>MenuItem</code> entity<span class="chip phase">phase 1</span></header>
+        <p><span class="k">What</span>Represents a dish in the permanent catalogue.</p>
+        <p><span class="k">How</span>Standard EF Core entity with data annotations for validation. <code>IsActive</code> defaults to <code>true</code> for soft-delete support. The <code>DailyStocks</code> navigation property enables the one-to-many relationship.</p>
+<pre><code>namespace CanteenApi.Models;
+
+public class MenuItem
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public string? Description { get; set; }
+    public required decimal Price { get; set; }
+    public required string Category { get; set; }
+    public string? ImageUrl { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public ICollection&lt;DailyStock&gt; DailyStocks { get; set; } = [];
+}</code></pre>
+      </div>
+
+      <h3>New file: Models/DailyStock.cs</h3>
+      <div class="fn">
+        <header><code>DailyStock</code> entity<span class="chip phase">phase 1</span></header>
+        <p><span class="k">What</span>Tracks how many servings of a particular dish are available on a given date.</p>
+        <p><span class="k">How</span>Uses <code>DateOnly</code> for the date column (no time component needed). The foreign key to <code>MenuItem</code> enables cascade delete if an item is hard-deleted. <code>QuantityOrdered</code> starts at zero and is incremented by the ordering flow (a later phase).</p>
+<pre><code>namespace CanteenApi.Models;
+
+public class DailyStock
+{
+    public int Id { get; set; }
+    public int MenuItemId { get; set; }
+    public MenuItem MenuItem { get; set; } = null!;
+    public required DateOnly Date { get; set; }
+    public required int QuantityAvailable { get; set; }
+    public int QuantityOrdered { get; set; } = 0;
+}</code></pre>
+      </div>
+
+      <h3>Modified: Data/CanteenDbContext.cs</h3>
+      <div class="fn">
+        <header><code>CanteenDbContext</code> changes<span class="chip phase">phase 1</span></header>
+        <p><span class="k">What</span>Register the two new <code>DbSet</code> properties and configure the composite unique index.</p>
+        <p><span class="k">How</span>Add <code>DbSet&lt;MenuItem&gt;</code> and <code>DbSet&lt;DailyStock&gt;</code>. In <code>OnModelCreating</code>, add a unique index on <code>(MenuItemId, Date)</code> for DailyStock, and configure the decimal precision for <code>MenuItem.Price</code>.</p>
+<pre><code>public DbSet&lt;MenuItem&gt; MenuItems =&gt; Set&lt;MenuItem&gt;();
+public DbSet&lt;DailyStock&gt; DailyStocks =&gt; Set&lt;DailyStock&gt;();
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity&lt;User&gt;()
+        .HasIndex(u =&gt; u.Email).IsUnique();
+
+    modelBuilder.Entity&lt;MenuItem&gt;()
+        .Property(m =&gt; m.Price).HasPrecision(8, 2);
+
+    modelBuilder.Entity&lt;DailyStock&gt;()
+        .HasIndex(s =&gt; new { s.MenuItemId, s.Date }).IsUnique();
+}</code></pre>
+      </div>
+
+      <h3>Seed data</h3>
+      <div class="note">
+        <p>Seed data makes development easier. You can add it via <code>HasData()</code> in <code>OnModelCreating</code>, or create a one-time endpoint. The recommended approach is a <code>/api/menu/seed</code> endpoint guarded by the Development environment check, so it does not ship to production.</p>
+      </div>
+      <p>Example seed items to get started:</p>
+      <div class="scroll"><table>
+        <thead><tr><th>Name</th><th>Price</th><th>Category</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Paneer Tikka</td><td>120</td><td>Veg</td><td>Grilled cottage cheese with spices</td></tr>
+          <tr><td>Chicken Biryani</td><td>180</td><td>NonVeg</td><td>Hyderabadi-style dum biryani</td></tr>
+          <tr><td>Masala Dosa</td><td>80</td><td>Veg</td><td>Crispy crepe with potato filling</td></tr>
+          <tr><td>Cold Coffee</td><td>60</td><td>Beverage</td><td>Blended iced coffee with cream</td></tr>
+          <tr><td>Samosa</td><td>30</td><td>Snack</td><td>Crispy pastry with spiced potato filling</td></tr>
+          <tr><td>Butter Chicken</td><td>200</td><td>NonVeg</td><td>Creamy tomato-based chicken curry</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Verify phase 1</h3>
+      <ol>
+        <li>Run <code>dotnet build</code> &mdash; should compile with no errors.</li>
+        <li>Delete <code>canteen.db</code> and run <code>dotnet run</code> &mdash; <code>EnsureCreated()</code> generates the new tables.</li>
+        <li>Open the database with any SQLite viewer and confirm <code>MenuItems</code> and <code>DailyStocks</code> tables exist with the correct columns.</li>
+      </ol>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase2">
+      <h2>Phase 2: Menu item API</h2>
+      <div class="phase-banner">
+        <div class="num">2</div>
+        <div><div class="title">MenuController &mdash; CRUD for the catalogue</div><div class="desc">Admin-only endpoints to create, read, update, and soft-delete menu items.</div></div>
+      </div>
+
+      <h3>New file: Models/MenuItemDto.cs</h3>
+      <div class="fn">
+        <header><code>CreateMenuItemRequest</code>, <code>UpdateMenuItemRequest</code>, <code>MenuItemResponse</code><span class="chip phase">phase 2</span></header>
+        <p><span class="k">What</span>DTOs for menu item operations, defined as C# records.</p>
+<pre><code>namespace CanteenApi.Models;
+
+public record CreateMenuItemRequest(
+    string Name,
+    string? Description,
+    decimal Price,
+    string Category,
+    string? ImageUrl);
+
+public record UpdateMenuItemRequest(
+    string? Name,
+    string? Description,
+    decimal? Price,
+    string? Category,
+    string? ImageUrl,
+    bool? IsActive);
+
+public record MenuItemResponse(
+    int Id,
+    string Name,
+    string? Description,
+    decimal Price,
+    string Category,
+    string? ImageUrl,
+    bool IsActive,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);</code></pre>
+      </div>
+
+      <h3>New file: Controllers/MenuController.cs</h3>
+      <p>An <code>[ApiController]</code> at <code>/api/menu</code>. Most endpoints require the <code>Admin</code> role; the list endpoint is accessible to all authenticated users.</p>
+
+      <h4>Endpoints</h4>
+      <div class="scroll"><table>
+        <thead><tr><th>Method</th><th>Route</th><th>Auth</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/menu</code></td><td><span class="chip">Authorize</span></td><td>List all active menu items (any logged-in user)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/menu/{id}</code></td><td><span class="chip">Authorize</span></td><td>Get a single menu item by ID</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/menu</code></td><td><span class="chip warn">Admin</span></td><td>Create a new menu item</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/api/menu/{id}</code></td><td><span class="chip warn">Admin</span></td><td>Update an existing menu item</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/menu/{id}</code></td><td><span class="chip warn">Admin</span></td><td>Soft-delete (sets IsActive = false)</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="fn">
+        <header><code>[HttpGet] GetAll</code><span class="chip phase">phase 2</span></header>
+        <p><span class="k">What</span>Returns all active menu items, optionally filtered by category.</p>
+        <p><span class="k">How</span>Queries <code>db.MenuItems.Where(m =&gt; m.IsActive)</code>. Accepts an optional <code>?category=Veg</code> query parameter. Maps each entity to a <code>MenuItemResponse</code> record.</p>
+<pre><code>[HttpGet]
+[Authorize]
+public async Task&lt;IActionResult&gt; GetAll([FromQuery] string? category)
+{
+    var query = db.MenuItems.Where(m =&gt; m.IsActive);
+    if (!string.IsNullOrEmpty(category))
+        query = query.Where(m =&gt; m.Category == category);
+
+    var items = await query
+        .OrderBy(m =&gt; m.Category).ThenBy(m =&gt; m.Name)
+        .Select(m =&gt; new MenuItemResponse(
+            m.Id, m.Name, m.Description, m.Price,
+            m.Category, m.ImageUrl, m.IsActive,
+            m.CreatedAt, m.UpdatedAt))
+        .ToListAsync();
+
+    return Ok(items);
+}</code></pre>
+      </div>
+
+      <div class="fn">
+        <header><code>[HttpPost] Create</code><span class="chip phase">phase 2</span></header>
+        <p><span class="k">What</span>Creates a new menu item. Admin only.</p>
+        <p><span class="k">How</span>Maps the <code>CreateMenuItemRequest</code> to a <code>MenuItem</code> entity, saves it, and returns the created item with a <code>201 Created</code> status and a <code>Location</code> header.</p>
+<pre><code>[HttpPost]
+[Authorize(Roles = "Admin")]
+public async Task&lt;IActionResult&gt; Create([FromBody] CreateMenuItemRequest req)
+{
+    var item = new MenuItem
+    {
+        Name = req.Name,
+        Description = req.Description,
+        Price = req.Price,
+        Category = req.Category,
+        ImageUrl = req.ImageUrl
+    };
+    db.MenuItems.Add(item);
+    await db.SaveChangesAsync();
+
+    var response = new MenuItemResponse(
+        item.Id, item.Name, item.Description, item.Price,
+        item.Category, item.ImageUrl, item.IsActive,
+        item.CreatedAt, item.UpdatedAt);
+
+    return CreatedAtAction(nameof(GetById), new { id = item.Id }, response);
+}</code></pre>
+      </div>
+
+      <div class="fn">
+        <header><code>[HttpPut("{id}")] Update</code><span class="chip phase">phase 2</span></header>
+        <p><span class="k">What</span>Partially updates a menu item. Admin only.</p>
+        <p><span class="k">How</span>Finds the item by ID. If not found, returns <code>404</code>. Only overwrites fields that are non-null in the request. Updates the <code>UpdatedAt</code> timestamp.</p>
+<pre><code>[HttpPut("{id}")]
+[Authorize(Roles = "Admin")]
+public async Task&lt;IActionResult&gt; Update(int id, [FromBody] UpdateMenuItemRequest req)
+{
+    var item = await db.MenuItems.FindAsync(id);
+    if (item is null) return NotFound();
+
+    if (req.Name is not null) item.Name = req.Name;
+    if (req.Description is not null) item.Description = req.Description;
+    if (req.Price.HasValue) item.Price = req.Price.Value;
+    if (req.Category is not null) item.Category = req.Category;
+    if (req.ImageUrl is not null) item.ImageUrl = req.ImageUrl;
+    if (req.IsActive.HasValue) item.IsActive = req.IsActive.Value;
+    item.UpdatedAt = DateTime.UtcNow;
+
+    await db.SaveChangesAsync();
+    return Ok(new MenuItemResponse(
+        item.Id, item.Name, item.Description, item.Price,
+        item.Category, item.ImageUrl, item.IsActive,
+        item.CreatedAt, item.UpdatedAt));
+}</code></pre>
+      </div>
+
+      <div class="fn">
+        <header><code>[HttpDelete("{id}")] Delete</code><span class="chip phase">phase 2</span></header>
+        <p><span class="k">What</span>Soft-deletes a menu item by setting <code>IsActive = false</code>. Admin only.</p>
+        <p><span class="k">How</span>Does not actually remove the row. This preserves order history that references the item. Returns <code>204 No Content</code>.</p>
+<pre><code>[HttpDelete("{id}")]
+[Authorize(Roles = "Admin")]
+public async Task&lt;IActionResult&gt; Delete(int id)
+{
+    var item = await db.MenuItems.FindAsync(id);
+    if (item is null) return NotFound();
+
+    item.IsActive = false;
+    item.UpdatedAt = DateTime.UtcNow;
+    await db.SaveChangesAsync();
+
+    return NoContent();
+}</code></pre>
+      </div>
+
+      <h3>Verify phase 2</h3>
+      <ol>
+        <li>Run <code>dotnet run</code>.</li>
+        <li>Register an admin user (manually set <code>Role = "Admin"</code> in the database, or add a seed admin).</li>
+        <li>Use curl or Postman:
+<pre><code># Create a menu item (with admin JWT)
+curl -X POST http://localhost:5230/api/menu \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer &lt;admin-token&gt;" \
+  -d '{"name":"Paneer Tikka","price":120,"category":"Veg"}'
+
+# List items (any user JWT)
+curl http://localhost:5230/api/menu \
+  -H "Authorization: Bearer &lt;token&gt;"
+
+# Filter by category
+curl "http://localhost:5230/api/menu?category=Veg" \
+  -H "Authorization: Bearer &lt;token&gt;"</code></pre>
+        </li>
+        <li>Confirm a non-admin user gets <code>403 Forbidden</code> on POST/PUT/DELETE.</li>
+      </ol>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase3">
+      <h2>Phase 3: Daily stock API</h2>
+      <div class="phase-banner">
+        <div class="num">3</div>
+        <div><div class="title">StockController &mdash; what's available today</div><div class="desc">Endpoints to set daily stock (admin) and query today's menu (all users).</div></div>
+      </div>
+
+      <h4>Endpoints</h4>
+      <div class="scroll"><table>
+        <thead><tr><th>Method</th><th>Route</th><th>Auth</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/stock/today</code></td><td><span class="chip">Authorize</span></td><td>Today's available items with remaining quantities</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/stock</code></td><td><span class="chip warn">Admin</span></td><td>Set stock for one item on a date</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/stock/batch</code></td><td><span class="chip warn">Admin</span></td><td>Set stock for multiple items at once</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/stock/{id}</code></td><td><span class="chip warn">Admin</span></td><td>Remove an item from the day's stock</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="fn">
+        <header><code>[HttpGet("today")] GetToday</code><span class="chip phase">phase 3</span></header>
+        <p><span class="k">What</span>Returns today's menu: every stocked item with its name, price, category, quantity available, and quantity remaining.</p>
+        <p><span class="k">How</span>Joins <code>DailyStock</code> with <code>MenuItem</code> where <code>Date == DateOnly.FromDateTime(DateTime.UtcNow)</code> and <code>MenuItem.IsActive</code>. Computes <code>Remaining = QuantityAvailable - QuantityOrdered</code>.</p>
+<div class="note warn">
+        <p><strong>EF Core gotcha:</strong> <code>OrderBy</code> must come <em>before</em> <code>Select</code> when projecting into a record constructor. If placed after, EF Core's SQLite provider throws <code>InvalidOperationException</code> because it cannot translate the ordering on the projected type.</p>
+      </div>
+<pre><code>[HttpGet("today")]
+[Authorize]
+public async Task&lt;IActionResult&gt; GetToday()
+{
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var items = await db.DailyStocks
+        .Include(s =&gt; s.MenuItem)
+        .Where(s =&gt; s.Date == today &amp;&amp; s.MenuItem.IsActive)
+        .OrderBy(s =&gt; s.MenuItem.Category)
+        .ThenBy(s =&gt; s.MenuItem.Name)
+        .Select(s =&gt; new TodayStockResponse(
+            s.Id,
+            s.MenuItemId,
+            s.MenuItem.Name,
+            s.MenuItem.Description,
+            s.MenuItem.Price,
+            s.MenuItem.Category,
+            s.MenuItem.ImageUrl,
+            s.QuantityAvailable,
+            s.QuantityOrdered,
+            s.QuantityAvailable - s.QuantityOrdered))
+        .ToListAsync();
+
+    return Ok(items);
+}</code></pre>
+      </div>
+
+      <div class="fn">
+        <header><code>[HttpPost] SetStock</code><span class="chip phase">phase 3</span></header>
+        <p><span class="k">What</span>Sets or updates the stock for a single menu item on a given date. Admin only.</p>
+        <p><span class="k">How</span>Accepts <code>{ menuItemId, date, quantityAvailable }</code>. If a DailyStock row already exists for that item+date, it updates the quantity. Otherwise it creates a new row. This is an upsert pattern.</p>
+<pre><code>[HttpPost]
+[Authorize(Roles = "Admin")]
+public async Task&lt;IActionResult&gt; SetStock([FromBody] SetStockRequest req)
+{
+    var item = await db.MenuItems.FindAsync(req.MenuItemId);
+    if (item is null) return NotFound(new { message = "Menu item not found" });
+
+    var existing = await db.DailyStocks
+        .FirstOrDefaultAsync(s =&gt; s.MenuItemId == req.MenuItemId
+                                &amp;&amp; s.Date == req.Date);
+    if (existing is not null)
+    {
+        existing.QuantityAvailable = req.QuantityAvailable;
+        await db.SaveChangesAsync();
+        return Ok(existing);
+    }
+
+    var stock = new DailyStock
+    {
+        MenuItemId = req.MenuItemId,
+        Date = req.Date,
+        QuantityAvailable = req.QuantityAvailable
+    };
+    db.DailyStocks.Add(stock);
+    await db.SaveChangesAsync();
+    return Created($"/api/stock/{stock.Id}", stock);
+}</code></pre>
+      </div>
+
+      <div class="fn">
+        <header><code>[HttpPost("batch")] SetStockBatch</code><span class="chip phase">phase 3</span></header>
+        <p><span class="k">What</span>Sets stock for multiple items at once. The admin's morning workflow: pick the items for today and set quantities in one go.</p>
+        <p><span class="k">How</span>Accepts an array of <code>SetStockRequest</code>. Runs all upserts in a single <code>SaveChangesAsync()</code> call. Returns the full list of today's stock. Uses the same OrderBy-before-Select pattern as <code>GetToday</code>.</p>
+<pre><code>[HttpPost("batch")]
+[Authorize(Roles = "Admin")]
+public async Task&lt;IActionResult&gt; SetStockBatch(
+    [FromBody] SetStockRequest[] requests)
+{
+    foreach (var req in requests)
+    {
+        var item = await db.MenuItems.FindAsync(req.MenuItemId);
+        if (item is null) continue;
+
+        var existing = await db.DailyStocks
+            .FirstOrDefaultAsync(s =&gt; s.MenuItemId == req.MenuItemId
+                                    &amp;&amp; s.Date == req.Date);
+        if (existing is not null)
+            existing.QuantityAvailable = req.QuantityAvailable;
+        else
+            db.DailyStocks.Add(new DailyStock
+            {
+                MenuItemId = req.MenuItemId,
+                Date = req.Date,
+                QuantityAvailable = req.QuantityAvailable
+            });
+    }
+
+    await db.SaveChangesAsync();
+
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var todayStock = await db.DailyStocks
+        .Include(s =&gt; s.MenuItem)
+        .Where(s =&gt; s.Date == today &amp;&amp; s.MenuItem.IsActive)
+        .OrderBy(s =&gt; s.MenuItem.Category)
+        .ThenBy(s =&gt; s.MenuItem.Name)
+        .Select(s =&gt; new TodayStockResponse(
+            s.Id, s.MenuItemId, s.MenuItem.Name,
+            s.MenuItem.Description, s.MenuItem.Price,
+            s.MenuItem.Category, s.MenuItem.ImageUrl,
+            s.QuantityAvailable, s.QuantityOrdered,
+            s.QuantityAvailable - s.QuantityOrdered))
+        .ToListAsync();
+
+    return Ok(todayStock);
+}</code></pre>
+      </div>
+
+      <h3>DTOs for stock</h3>
+<pre><code>public record SetStockRequest(
+    int MenuItemId, DateOnly Date, int QuantityAvailable);
+
+public record TodayStockResponse(
+    int Id, int MenuItemId, string Name, string? Description,
+    decimal Price, string Category, string? ImageUrl,
+    int QuantityAvailable, int QuantityOrdered, int Remaining);</code></pre>
+
+      <h3>Verify phase 3</h3>
+      <ol>
+        <li>Set stock for today:
+<pre><code>curl -X POST http://localhost:5230/api/stock \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer &lt;admin-token&gt;" \
+  -d '{"menuItemId":1,"date":"2026-11-03","quantityAvailable":50}'</code></pre>
+        </li>
+        <li>Get today's menu:
+<pre><code>curl http://localhost:5230/api/stock/today \
+  -H "Authorization: Bearer &lt;token&gt;"</code></pre>
+        </li>
+        <li>Confirm items without stock entries do not appear in today's response.</li>
+        <li>Confirm non-admin users get <code>403</code> on POST and DELETE.</li>
+      </ol>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase4">
+      <h2>Phase 4: Admin frontend</h2>
+      <div class="phase-banner">
+        <div class="num">4</div>
+        <div><div class="title">Menu + stock management pages</div><div class="desc">React pages for the admin to manage the menu catalogue and set daily stock.</div></div>
+      </div>
+
+      <h3>New file: api/menu.ts</h3>
+      <div class="fn">
+        <header><code>api/menu.ts</code> &mdash; API client<span class="chip phase">phase 4</span></header>
+        <p><span class="k">What</span>Functions that call the menu and stock endpoints, similar to <code>api/auth.ts</code>.</p>
+        <p><span class="k">How</span>Every function reads the token from <code>localStorage</code> and sets the <code>Authorization</code> header. Functions: <code>getMenuItems()</code>, <code>createMenuItem()</code>, <code>updateMenuItem()</code>, <code>deleteMenuItem()</code>, <code>getTodayStock()</code>, <code>setStock()</code>, <code>setStockBatch()</code>.</p>
+<pre><code>const API = "http://localhost:5230/api";
+
+function authHeaders(): HeadersInit {
+  const auth = localStorage.getItem("auth");
+  const token = auth ? JSON.parse(auth).token : "";
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+  };
+}
+
+export async function getMenuItems(category?: string) {
+  const url = category
+    ? `${API}/menu?category=${category}`
+    : `${API}/menu`;
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to load menu");
+  return res.json();
+}
+
+export async function createMenuItem(data: CreateMenuItemRequest) {
+  const res = await fetch(`${API}/menu`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create item");
+  return res.json();
+}
+
+export async function getTodayStock() {
+  const res = await fetch(`${API}/stock/today`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to load stock");
+  return res.json();
+}</code></pre>
+      </div>
+
+      <h3>New file: pages/MenuPage.tsx</h3>
+      <div class="fn">
+        <header><code>MenuPage</code> &mdash; admin menu management<span class="chip phase">phase 4</span></header>
+        <p><span class="k">What</span>A page where admins can view all menu items, add new ones, edit existing ones, and soft-delete them.</p>
+        <p><span class="k">How</span>Fetches items on mount. Displays a table/card view grouped by category. An "Add item" button opens a form modal. Each item row has Edit and Delete buttons. The delete action calls the API and removes the item from the local list.</p>
+        <p><span class="k">Key state</span><code>items[]</code>, <code>showForm</code> (boolean), <code>editingItem</code> (null or MenuItem), <code>loading</code>, <code>error</code>.</p>
+      </div>
+
+      <h3>New file: pages/StockPage.tsx</h3>
+      <div class="fn">
+        <header><code>StockPage</code> &mdash; daily stock control<span class="chip phase">phase 4</span></header>
+        <p><span class="k">What</span>A page where admins set which items are available today and how many servings.</p>
+        <p><span class="k">How</span>Left side shows all active menu items with checkboxes. Right side shows the items selected for today with quantity inputs. A "Save" button sends a batch stock request. After saving, the admin can see the same view employees will see.</p>
+        <p><span class="k">Key state</span><code>allItems[]</code>, <code>todayStock[]</code>, <code>selections: Map&lt;id, quantity&gt;</code>.</p>
+      </div>
+
+      <h3>Modified: App.tsx</h3>
+      <div class="fn">
+        <header><code>App</code> routing changes<span class="chip phase">phase 4</span></header>
+        <p><span class="k">What</span>Add new routes for admin pages.</p>
+        <p><span class="k">How</span>Add an <code>AdminRoute</code> guard that checks <code>user.role === "Admin"</code> and redirects non-admins to <code>/</code>. New routes:</p>
+        <ul>
+          <li><code>/admin/menu</code> &rarr; <code>MenuPage</code> (inside <code>AdminRoute</code>)</li>
+          <li><code>/admin/stock</code> &rarr; <code>StockPage</code> (inside <code>AdminRoute</code>)</li>
+        </ul>
+<pre><code>function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (!user) return &lt;Navigate to="/login" replace /&gt;;
+  if (user.role !== "Admin") return &lt;Navigate to="/" replace /&gt;;
+  return &lt;&gt;{children}&lt;/&gt;;
+}
+
+// In the router:
+&lt;Route path="/admin/menu" element={
+  &lt;AdminRoute&gt;&lt;MenuPage /&gt;&lt;/AdminRoute&gt;
+} /&gt;
+&lt;Route path="/admin/stock" element={
+  &lt;AdminRoute&gt;&lt;StockPage /&gt;&lt;/AdminRoute&gt;
+} /&gt;</code></pre>
+      </div>
+
+      <h3>Removed: pages/HomePage.tsx</h3>
+      <div class="fn">
+        <header><code>HomePage</code> replaced<span class="chip phase">phase 4+5</span></header>
+        <p><span class="k">What</span><code>HomePage.tsx</code> was removed. Its role as the post-login landing page was taken over by <code>TodayMenuPage.tsx</code> in Phase 5.</p>
+        <p><span class="k">How</span>Admin navigation ("Manage Menu", "Set Stock") is rendered directly inside <code>TodayMenuPage</code>, conditionally based on <code>user.role === "Admin"</code>.</p>
+      </div>
+
+      <h3>Verify phase 4</h3>
+      <ol>
+        <li>Start both servers (<code>dotnet run</code> and <code>npm run dev</code>).</li>
+        <li>Register a user, then manually set their role to <code>Admin</code> in SQLite.</li>
+        <li>Log in as admin &rarr; see the admin navigation links.</li>
+        <li>Create a few menu items from the admin page.</li>
+        <li>Set daily stock for today.</li>
+        <li>Verify an employee account does NOT see admin links and gets redirected from <code>/admin/*</code> routes.</li>
+      </ol>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase5">
+      <h2>Phase 5: Employee menu view</h2>
+      <div class="phase-banner">
+        <div class="num">5</div>
+        <div><div class="title">Today's menu for employees</div><div class="desc">The page employees see after login: today's available items grouped by category, with remaining stock.</div></div>
+      </div>
+
+      <h3>New file: pages/TodayMenuPage.tsx</h3>
+      <div class="fn">
+        <header><code>TodayMenuPage</code><span class="chip phase">phase 5</span></header>
+        <p><span class="k">What</span>Displays today's available menu items in a browsable, card-based layout.</p>
+        <p><span class="k">How</span>Calls <code>getTodayStock()</code> on mount. Shows items as cards in a responsive grid. Each card shows the item name, description, price, and remaining servings. Items with zero remaining show a "Sold Out" badge with reduced opacity. A category filter bar with counts lets users narrow the view. Admin users see "Manage Menu" and "Set Stock" navigation buttons in the header.</p>
+        <p><span class="k">Key state</span><code>items: TodayStockItem[]</code>, <code>filter: string | null</code> (selected category), <code>loading</code>, <code>error</code>.</p>
+<pre><code>export default function TodayMenuPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [items, setItems] = useState&lt;TodayStockItem[]&gt;([]);
+  const [filter, setFilter] = useState&lt;string | null&gt;(null);
+
+  useEffect(() =&gt; {
+    getTodayStock()
+      .then(setItems)
+      .catch(() =&gt; setError("Failed to load today's menu"))
+      .finally(() =&gt; setLoading(false));
+  }, []);
+
+  const categories = [...new Set(items.map(i =&gt; i.category))];
+  const filtered = filter
+    ? items.filter(i =&gt; i.category === filter)
+    : items;
+
+  // Header with admin nav + logout
+  // Category filter bar with counts: "All (5)", "Veg (3)", ...
+  // Responsive card grid:
+  //   each card shows name, price, description,
+  //   category chip, "N left" or "Sold Out" badge
+  //   sold-out cards rendered at 60% opacity
+}</code></pre>
+      </div>
+
+      <h3>Modified: App.tsx</h3>
+      <div class="fn">
+        <header><code>App</code> routing update<span class="chip phase">phase 5</span></header>
+        <p><span class="k">What</span>The home page (<code>/</code>) now shows <code>TodayMenuPage</code> instead of the placeholder <code>HomePage</code>. The <code>HomePage</code> import was removed entirely.</p>
+        <p><span class="k">How</span>The default route renders <code>TodayMenuPage</code> wrapped in <code>ProtectedRoute</code>. Admin navigation buttons are rendered directly inside <code>TodayMenuPage</code>'s header, not in a shared layout component.</p>
+      </div>
+
+      <h3>Verify phase 5</h3>
+      <ol>
+        <li>As admin, set stock for a few items on today's date.</li>
+        <li>Log in as an employee &rarr; the home page shows today's menu cards.</li>
+        <li>Verify category filtering works.</li>
+        <li>Verify items with no stock entry for today do not appear.</li>
+        <li>Verify the "Sold Out" badge shows when <code>Remaining == 0</code>.</li>
+      </ol>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="files">
+      <h2>Files changed: full summary</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Phase</th><th>File</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip phase">1</span></td><td><code>server/Models/MenuItem.cs</code></td><td>New &mdash; MenuItem entity</td></tr>
+          <tr><td><span class="chip phase">1</span></td><td><code>server/Models/DailyStock.cs</code></td><td>New &mdash; DailyStock entity</td></tr>
+          <tr><td><span class="chip phase">1</span></td><td><code>server/Data/CanteenDbContext.cs</code></td><td>Modified &mdash; add DbSets + indexes</td></tr>
+          <tr><td><span class="chip phase">2</span></td><td><code>server/Models/MenuItemDto.cs</code></td><td>New &mdash; request/response DTOs</td></tr>
+          <tr><td><span class="chip phase">2</span></td><td><code>server/Controllers/MenuController.cs</code></td><td>New &mdash; CRUD for menu items</td></tr>
+          <tr><td><span class="chip phase">3</span></td><td><code>server/Controllers/StockController.cs</code></td><td>New &mdash; daily stock endpoints</td></tr>
+          <tr><td><span class="chip phase">3</span></td><td><code>server/Models/MenuItemDto.cs</code></td><td>Modified &mdash; add SetStockRequest</td></tr>
+          <tr><td><span class="chip phase">4</span></td><td><code>client/src/api/menu.ts</code></td><td>New &mdash; API client for menu + stock</td></tr>
+          <tr><td><span class="chip phase">4</span></td><td><code>client/src/pages/MenuPage.tsx</code></td><td>New &mdash; admin menu management</td></tr>
+          <tr><td><span class="chip phase">4</span></td><td><code>client/src/pages/StockPage.tsx</code></td><td>New &mdash; admin daily stock control</td></tr>
+          <tr><td><span class="chip phase">4</span></td><td><code>client/src/App.tsx</code></td><td>Modified &mdash; add AdminRoute + new routes</td></tr>
+          <tr><td><span class="chip phase">4+5</span></td><td><code>client/src/pages/HomePage.tsx</code></td><td>Removed &mdash; replaced by TodayMenuPage.tsx</td></tr>
+          <tr><td><span class="chip phase">5</span></td><td><code>client/src/pages/TodayMenuPage.tsx</code></td><td>New &mdash; employee menu browse page</td></tr>
+          <tr><td><span class="chip phase">5</span></td><td><code>client/src/App.tsx</code></td><td>Modified &mdash; home route shows TodayMenuPage</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="security">
+      <h2>Security + access control</h2>
+      <div class="cols">
+        <div>
+          <h3>What the design provides</h3>
+          <ul>
+            <li><strong>Role-based access.</strong> The JWT already carries the <code>Role</code> claim. <code>[Authorize(Roles = "Admin")]</code> on endpoints enforces server-side access control.</li>
+            <li><strong>Soft-delete.</strong> Menu items are never hard-deleted, preserving referential integrity with future orders.</li>
+            <li><strong>Frontend guards.</strong> <code>AdminRoute</code> prevents employees from seeing admin pages, but the real enforcement is on the API.</li>
+            <li><strong>Unique constraint on daily stock.</strong> The composite index on <code>(MenuItemId, Date)</code> prevents duplicate entries.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Things to consider</h3>
+          <div class="note warn">
+            <p>Worth addressing as the app grows.</p>
+          </div>
+          <ul>
+            <li><strong>No admin creation flow.</strong> Currently, setting a user's role to Admin requires direct database access. Consider an admin-invite endpoint or a seed admin.</li>
+            <li><strong>No input validation.</strong> Negative prices or negative quantities are not rejected. Add <code>[Range]</code> annotations or FluentValidation.</li>
+            <li><strong>No pagination.</strong> The menu list returns all items. Fine for a small canteen; add <code>skip</code>/<code>take</code> if the catalogue grows.</li>
+            <li><strong>No image upload.</strong> <code>ImageUrl</code> is a raw string. Consider a file upload endpoint or a CDN integration.</li>
+            <li><strong>Timezone handling.</strong> <code>DateOnly.FromDateTime(DateTime.UtcNow)</code> uses UTC. The canteen's local date may differ. Consider using the canteen's timezone.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="next">
+      <h2>What comes next</h2>
+      <p>With the menu in place, the next major feature is <strong>ordering</strong>. The ordering flow builds directly on menu management:</p>
+      <ol>
+        <li><strong>OrderController</strong> &mdash; place order, cancel, update status (placed &rarr; preparing &rarr; ready &rarr; collected).</li>
+        <li><strong>Stock decrement</strong> &mdash; when an order is placed, <code>DailyStock.QuantityOrdered</code> is incremented atomically.</li>
+        <li><strong>Order history</strong> &mdash; employees can view their past orders.</li>
+        <li><strong>Kitchen view</strong> &mdash; a real-time dashboard of incoming orders for kitchen staff (using SignalR).</li>
+        <li><strong>Feedback</strong> &mdash; post-meal rating and comment system, leading to the AI triage service.</li>
+      </ol>
+      <div class="note">
+        <p>The ordering phase will add <code>Order</code> and <code>OrderItem</code> entities, an <code>OrderController</code>, and modify <code>DailyStock</code> to decrement available quantities. This is designed to be the next document in this series.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>This document describes the implemented menu management feature for company-canteen. All five phases are built and tested. Code snippets match the actual implementation.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

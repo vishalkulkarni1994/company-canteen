@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canteen Connect — Login Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --code-bg: #eaf0ee;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514;
+      --surface: #151f1d;
+      --ink: #e5eeec;
+      --muted: #94a8a2;
+      --line: #25352f;
+      --accent: #5eead4;
+      --accent-soft: #123430;
+      --warn: #fbbf24;
+      --warn-soft: #302509;
+      --code-bg: #101a18;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514;
+    --surface: #151f1d;
+    --ink: #e5eeec;
+    --muted: #94a8a2;
+    --line: #25352f;
+    --accent: #5eead4;
+    --accent-soft: #123430;
+    --warn: #fbbf24;
+    --warn-soft: #302509;
+    --code-bg: #101a18;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--font-body);
+    padding-inline: 16px;
+    padding-block: 24px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    nav.toc { position: static; }
+    nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+  nav.toc { position: sticky; top: 16px; align-self: start; padding-top: 8px; font-size: 14px; }
+  nav.toc p { margin: 0 0 8px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+
+  main { min-width: 0; }
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font: 600 18px/1.3 var(--font-display); margin: 28px 0 8px; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  section { padding-block: 40px 8px; border-top: 1px solid var(--line); margin-top: 32px; scroll-margin-top: 16px; }
+  header.top + section { margin-top: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; max-width: 72ch; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+
+  code { font: 500 .88em var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; font: 400 13.5px/1.55 var(--font-mono); }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .scroll { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 18px; max-width: 72ch; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .cols > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .cols h3 { margin-top: 0; }
+  .cols p:last-child, .cols ul:last-child { margin-bottom: 0; }
+
+  .fn { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px 6px; margin: 0 0 16px; }
+  .fn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+  .fn > header code { font-size: 15px; background: none; padding: 0; color: var(--accent); }
+  .fn p { max-width: none; }
+  .fn .k { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+  .fn pre { margin-top: 4px; }
+
+  ol.trace { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; margin: 0 0 18px; max-width: none; }
+  ol.trace li { counter-increment: s; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  ol.trace li::before { content: counter(s); font: 600 14px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  ol.trace li > div > :last-child { margin-bottom: 0; }
+  ol.trace b { display: block; margin-bottom: 2px; }
+
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 0 0 20px; }
+  .diagram svg { display: block; min-width: 720px; width: 100%; height: auto; }
+  .diagram .lane { stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  .diagram .box { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.2; }
+  .diagram .boxname { fill: var(--ink); font: 600 12.5px var(--font-body); text-anchor: middle; }
+  .diagram .boxfile { fill: var(--muted); font: 400 10.5px var(--font-mono); text-anchor: middle; }
+  .diagram .msg { stroke: var(--ink); stroke-width: 1.5; fill: none; }
+  .diagram .ret { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+  .diagram .lbl { fill: var(--ink); font: 500 12px var(--font-body); paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
+  .diagram .lbl.m { font-family: var(--font-mono); font-size: 11px; }
+  .diagram .num { fill: var(--accent); font: 600 11px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+  .diagram .arrow { fill: var(--ink); }
+  .diagram .arrow.r { fill: var(--muted); }
+
+  .jwt { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .jwt > div { min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px 14px; }
+  .jwt h4 { margin: 0 0 6px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .jwt pre { margin: 0; border: 0; padding: 0; background: none; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#stack">Tech stack</a></li>
+      <li><a href="#structure">Project structure</a></li>
+      <li><a href="#diagram">Login at a glance</a></li>
+      <li><a href="#trace">Step by step</a></li>
+      <li><a href="#api">Backend: every function</a></li>
+      <li><a href="#web">Frontend: every page</a></li>
+      <li><a href="#token">The token itself</a></li>
+      <li><a href="#errors">Failure cases</a></li>
+      <li><a href="#security">Security notes</a></li>
+      <li><a href="#run">Running it</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">company-canteen &middot; authentication</p>
+      <h1>How a person logs in</h1>
+      <p class="lede">From the sign-in page to the home screen: every endpoint, every component, what each one does and how it does it. Built with .NET 10, React, and SQLite.</p>
+    </header>
+
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>Login uses an email and a password stored in SQLite. The .NET API checks them and hands back a <strong>JSON Web Token (JWT)</strong>: a signed note that says "this is user X with role Y". The browser keeps the token and attaches it to every later request. The server never keeps a session in memory; it verifies the signature on each request through ASP.NET's <code>JwtBearer</code> middleware.</p>
+      <div class="cols">
+        <div>
+          <h3>Frontend <span class="chip plain">client/</span></h3>
+          <p>React 19 + TypeScript + Vite. Files: <code>App.tsx</code>, <code>main.tsx</code>, <code>pages/LoginPage.tsx</code>, <code>pages/HomePage.tsx</code>, <code>api/auth.ts</code>, <code>context/AuthContext.tsx</code>.</p>
+        </div>
+        <div>
+          <h3>Backend <span class="chip plain">server/</span></h3>
+          <p>.NET 10 Web API with controllers. Files: <code>Program.cs</code>, <code>Controllers/AuthController.cs</code>, <code>Models/User.cs</code>, <code>Models/LoginRequest.cs</code>, <code>Data/CanteenDbContext.cs</code>, <code>Services/AuthService.cs</code>.</p>
+        </div>
+        <div>
+          <h3>Data <span class="chip plain">SQLite</span></h3>
+          <p>The <code>Users</code> table: <code>Id</code> (int, PK), <code>Email</code> (unique), <code>Name</code>, <code>PasswordHash</code>, <code>Role</code>, <code>CreatedAt</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="stack">
+      <h2>Tech stack</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Frontend</td><td>React 19, TypeScript, Vite</td><td>SPA with login form, auth context, protected routes</td></tr>
+          <tr><td>Routing</td><td>React Router v7</td><td>Client-side navigation, guest/protected route guards</td></tr>
+          <tr><td>API</td><td>.NET 10 Web API (controllers)</td><td>REST endpoints for register, login, and session check</td></tr>
+          <tr><td>ORM</td><td>Entity Framework Core</td><td>SQLite access with code-first schema</td></tr>
+          <tr><td>Database</td><td>SQLite</td><td>Single-file database, auto-created on first run</td></tr>
+          <tr><td>Auth</td><td>JWT Bearer (ASP.NET), BCrypt.Net</td><td>Token signing/validation, password hashing</td></tr>
+          <tr><td>CORS</td><td>ASP.NET CORS middleware</td><td>Allows requests from Vite dev server on port 5173</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="structure">
+      <h2>Project structure</h2>
+<pre><code>company-canteen/
+  CanteenConnect.sln
+  .gitignore
+  server/                          .NET 10 Web API
+    CanteenApi.csproj
+    Program.cs                     Entry point, services, middleware
+    appsettings.json               JWT config (production placeholder)
+    appsettings.Development.json   JWT config (dev secret)
+    Controllers/
+      AuthController.cs            Login, register, me endpoints
+      MenuController.cs            CRUD for menu items (admin)
+      StockController.cs           Daily stock endpoints
+    Models/
+      User.cs                      EF Core entity
+      LoginRequest.cs              Auth request/response DTOs
+      MenuItem.cs                  Menu item entity
+      DailyStock.cs                Daily stock entity
+      MenuItemDto.cs               Menu + stock DTOs
+    Data/
+      CanteenDbContext.cs           DbContext with all DbSets
+    Services/
+      AuthService.cs               JWT token generation
+    Properties/
+      launchSettings.json           Dev server on port 5230
+  client/                          React + TypeScript
+    package.json
+    vite.config.ts
+    index.html
+    src/
+      main.tsx                     Entry point
+      App.tsx                      Router, auth + admin guards
+      index.css                    Global reset
+      api/
+        auth.ts                    login() and register() calls
+        menu.ts                    Menu + stock API client
+      context/
+        AuthContext.tsx             Token persistence, user state
+      pages/
+        LoginPage.tsx              Sign-in / register form
+        TodayMenuPage.tsx          Today's menu (default home)
+        MenuPage.tsx               Admin menu management
+        StockPage.tsx              Admin daily stock control</code></pre>
+    </section>
+
+    <section id="diagram">
+      <h2>Login at a glance</h2>
+      <p>One successful sign-in, left to right. Solid arrows are calls, dashed arrows are replies. The numbers match the <a href="#trace">step-by-step walkthrough</a>.</p>
+      <div class="diagram">
+        <svg viewBox="0 0 780 440" role="img" aria-label="Sequence diagram of a successful login across LoginPage, auth API client, AuthController, AuthService, and SQLite">
+          <defs>
+            <marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" class="arrow"/></marker>
+            <marker id="ahr" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" class="arrow r"/></marker>
+          </defs>
+          <g>
+            <line class="lane" x1="80" y1="64" x2="80" y2="430"/>
+            <line class="lane" x1="235" y1="64" x2="235" y2="430"/>
+            <line class="lane" x1="420" y1="64" x2="420" y2="430"/>
+            <line class="lane" x1="580" y1="64" x2="580" y2="430"/>
+            <line class="lane" x1="710" y1="64" x2="710" y2="430"/>
+          </g>
+          <g>
+            <rect class="box" x="15" y="14" width="130" height="50" rx="6"/>
+            <text class="boxname" x="80" y="35">LoginPage</text>
+            <text class="boxfile" x="80" y="52">LoginPage.tsx</text>
+
+            <rect class="box" x="170" y="14" width="130" height="50" rx="6"/>
+            <text class="boxname" x="235" y="35">auth API</text>
+            <text class="boxfile" x="235" y="52">api/auth.ts</text>
+
+            <rect class="box" x="345" y="14" width="150" height="50" rx="6"/>
+            <text class="boxname" x="420" y="35">AuthController</text>
+            <text class="boxfile" x="420" y="52">AuthController.cs</text>
+
+            <rect class="box" x="510" y="14" width="140" height="50" rx="6"/>
+            <text class="boxname" x="580" y="35">AuthService</text>
+            <text class="boxfile" x="580" y="52">AuthService.cs</text>
+
+            <rect class="box" x="650" y="14" width="120" height="50" rx="6"/>
+            <text class="boxname" x="710" y="35">SQLite</text>
+            <text class="boxfile" x="710" y="52">canteen.db</text>
+          </g>
+
+          <!-- 1: LoginPage -> auth API -->
+          <path class="msg" d="M80 100 H233" marker-end="url(#ah)"/>
+          <text class="num" x="88" y="94">1</text>
+          <text class="lbl m" x="108" y="94">login(email, pw)</text>
+
+          <!-- 2: auth API -> .NET -->
+          <path class="msg" d="M235 136 H418" marker-end="url(#ah)"/>
+          <text class="num" x="243" y="130">2</text>
+          <text class="lbl m" x="263" y="130">POST /api/auth/login</text>
+
+          <!-- 3: .NET -> SQLite -->
+          <path class="msg" d="M420 172 H708" marker-end="url(#ah)"/>
+          <text class="num" x="428" y="166">3</text>
+          <text class="lbl m" x="448" y="166">FindOne(email)</text>
+
+          <!-- 4: SQLite -> .NET -->
+          <path class="ret" d="M710 204 H422" marker-end="url(#ahr)"/>
+          <text class="num" x="530" y="198">4</text>
+          <text class="lbl" x="548" y="198">User record</text>
+
+          <!-- 5: .NET self: BCrypt verify -->
+          <path class="msg" d="M420 236 H448 V256 H422" marker-end="url(#ah)"/>
+          <text class="num" x="455" y="246">5</text>
+          <text class="lbl" x="470" y="246">BCrypt.Verify(password, hash)</text>
+
+          <!-- 6: .NET -> AuthService -->
+          <path class="msg" d="M420 284 H578" marker-end="url(#ah)"/>
+          <text class="num" x="428" y="278">6</text>
+          <text class="lbl m" x="448" y="278">GenerateToken(user)</text>
+
+          <!-- 7: AuthService -> .NET -->
+          <path class="ret" d="M580 316 H422" marker-end="url(#ahr)"/>
+          <text class="num" x="478" y="310">7</text>
+          <text class="lbl" x="496" y="310">JWT string</text>
+
+          <!-- 8: .NET -> LoginPage (full return) -->
+          <path class="ret" d="M420 352 H82" marker-end="url(#ahr)"/>
+          <text class="num" x="210" y="346">8</text>
+          <text class="lbl m" x="228" y="346">{ token, email, name, role }</text>
+
+          <!-- 9: LoginPage self: store + navigate -->
+          <path class="msg" d="M80 380 H108 V400 H82" marker-end="url(#ah)"/>
+          <text class="num" x="115" y="392">9</text>
+          <text class="lbl" x="130" y="392">setAuth() &rarr; navigate("/")</text>
+        </svg>
+      </div>
+    </section>
+
+    <section id="trace">
+      <h2>Step by step: a fresh sign-in</h2>
+      <ol class="trace">
+        <li><div><b>Browser opens the app</b><p><code>main.tsx</code> mounts <code>&lt;App /&gt;</code> inside <code>StrictMode</code>. <code>AuthProvider</code> checks <code>localStorage</code> for a saved auth state. With nothing saved, <code>user</code> is <code>null</code>, so the router redirects to <code>/login</code> and renders <code>LoginPage</code>.</p></div></li>
+        <li><div><b>User fills in the form and presses Sign In</b><p>Each keystroke updates the <code>email</code> or <code>password</code> state via controlled inputs. The email field has <code>type="email"</code> and <code>required</code>; the password field has <code>minLength={6}</code>. A toggle switches between Sign In and Register modes. Submitting calls <code>handleSubmit(e)</code>.</p></div></li>
+        <li><div><b>handleSubmit() calls the API</b><p>It sets <code>loading = true</code> (the button shows "..."), clears any old error, and calls <code>login(email, password)</code> from <code>api/auth.ts</code>. This sends a <code>POST</code> to <code>http://localhost:5230/api/auth/login</code> with a JSON body <code>{ email, password }</code>.</p></div></li>
+        <li><div><b>AuthController receives the request</b><p>ASP.NET routes the request to the <code>Login</code> action in <code>AuthController</code>. The <code>[FromBody]</code> attribute deserializes the JSON into a <code>LoginRequest</code> record. It queries SQLite via EF Core: <code>db.Users.FirstOrDefaultAsync(u =&gt; u.Email == req.Email)</code>.</p></div></li>
+        <li><div><b>Password verification</b><p>If the user exists, <code>BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash)</code> re-hashes the typed password with the stored salt and compares. If no user is found or the password is wrong, the endpoint returns <code>401 Unauthorized</code>.</p></div></li>
+        <li><div><b>Token generation</b><p><code>AuthService.GenerateToken(user)</code> creates a JWT with four claims (<code>NameIdentifier</code>, <code>Email</code>, <code>Name</code>, <code>Role</code>), signs it with HMAC-SHA256 using the key from <code>appsettings</code>, and sets an 8-hour expiry. It also sets the <code>Issuer</code> and <code>Audience</code>.</p></div></li>
+        <li><div><b>The response travels back</b><p>The controller action returns <code>Ok(new AuthResponse(...))</code> which becomes a <code>200 OK</code> with <code>{ token, email, name, role }</code>. The <code>api/auth.ts</code> client parses the JSON and returns it to <code>LoginPage</code>.</p></div></li>
+        <li><div><b>The app stores the auth state and navigates</b><p><code>setAuth(res)</code> writes the token and user info to <code>localStorage</code> under the key <code>auth</code> as a JSON string, and updates the React context. <code>navigate("/")</code> sends the user to the home page. The <code>ProtectedRoute</code> wrapper sees <code>user</code> is no longer null and renders <code>HomePage</code>.</p></div></li>
+      </ol>
+    </section>
+
+    <section id="api">
+      <h2>Backend: every function</h2>
+      <p>All paths are under <code>server/</code>.</p>
+
+      <div class="fn">
+        <header><code>Program.cs</code> startup<span class="chip plain">Program.cs</span></header>
+        <p><span class="k">What</span>Configures services and the middleware pipeline. Contains no endpoint logic.</p>
+        <p><span class="k">How</span>Registers <code>AddControllers()</code>, <code>CanteenDbContext</code> with the SQLite connection string, <code>AuthService</code> as a singleton, and the JWT Bearer authentication scheme. Configures CORS to allow the Vite dev server at <code>http://localhost:5173</code>. On startup, calls <code>db.Database.EnsureCreated()</code> to auto-create the SQLite file and tables. Endpoints are discovered via <code>app.MapControllers()</code>.</p>
+      </div>
+
+      <h3>Controllers/AuthController.cs <span class="chip plain">auth endpoints</span></h3>
+      <p>An <code>[ApiController]</code> routed at <code>api/[controller]</code>, which resolves to <code>/api/auth</code>. Dependencies (<code>CanteenDbContext</code> and <code>AuthService</code>) are injected via the primary constructor.</p>
+
+      <div class="fn">
+        <header><code>[HttpPost("register")]</code> Register<span class="chip plain">AuthController.cs</span></header>
+        <p><span class="k">What</span>Creates a new user account and returns a token.</p>
+        <p><span class="k">How</span>Accepts a <code>[FromBody] RegisterRequest</code>. Checks if the email already exists. If so, returns <code>Conflict()</code>. Otherwise hashes the password with BCrypt, creates the <code>User</code> entity with role <code>"Employee"</code>, saves to SQLite, generates a JWT, and returns the <code>AuthResponse</code>.</p>
+<pre><code>var user = new User
+{
+    Email = req.Email,
+    PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
+    Name = req.Name
+};
+db.Users.Add(user);
+await db.SaveChangesAsync();
+var token = auth.GenerateToken(user);
+return Ok(new AuthResponse(token, user.Email, user.Name, user.Role));</code></pre>
+      </div>
+
+      <div class="fn">
+        <header><code>[HttpPost("login")]</code> Login<span class="chip plain">AuthController.cs</span></header>
+        <p><span class="k">What</span>Checks credentials and issues a token. This is the heart of the login flow.</p>
+        <p><span class="k">How</span>Accepts a <code>[FromBody] LoginRequest</code>. Looks up the user by email. If not found or the password doesn't verify, returns <code>Unauthorized()</code> with no message distinguishing the two cases. On success, generates a token and returns the <code>AuthResponse</code>.</p>
+<pre><code>var user = await db.Users.FirstOrDefaultAsync(u =&gt; u.Email == req.Email);
+if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
+    return Unauthorized();
+
+var token = auth.GenerateToken(user);
+return Ok(new AuthResponse(token, user.Email, user.Name, user.Role));</code></pre>
+      </div>
+
+      <div class="fn">
+        <header><code>[HttpGet("me")] [Authorize]</code> Me<span class="chip plain">AuthController.cs</span></header>
+        <p><span class="k">What</span>Returns the currently signed-in user's info from the token claims.</p>
+        <p><span class="k">How</span>Protected by the <code>[Authorize]</code> attribute. The JWT Bearer middleware validates the token before the action runs. The action reads the claims from the inherited <code>User</code> property (a <code>ClaimsPrincipal</code>). No database call is made &mdash; it trusts the token.</p>
+      </div>
+
+      <div class="fn">
+        <header><code>AuthService.GenerateToken(user)</code><span class="chip plain">Services/AuthService.cs</span></header>
+        <p><span class="k">What</span>Creates the signed JWT.</p>
+        <p><span class="k">How</span>Builds a <code>SymmetricSecurityKey</code> from the configured <code>Jwt:Key</code>. Adds four claims: <code>NameIdentifier</code> (user id), <code>Email</code>, <code>Name</code>, and <code>Role</code>. Sets issuer, audience, and an 8-hour expiry. Signs with <code>HmacSha256</code> and returns the serialized token string.</p>
+<pre><code>var claims = new[]
+{
+    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+    new Claim(ClaimTypes.Email, user.Email),
+    new Claim(ClaimTypes.Name, user.Name),
+    new Claim(ClaimTypes.Role, user.Role)
+};
+var token = new JwtSecurityToken(
+    issuer: config["Jwt:Issuer"],
+    audience: config["Jwt:Audience"],
+    claims: claims,
+    expires: DateTime.UtcNow.AddHours(8),
+    signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));</code></pre>
+      </div>
+
+      <div class="fn">
+        <header><code>CanteenDbContext</code><span class="chip plain">Data/CanteenDbContext.cs</span></header>
+        <p><span class="k">What</span>EF Core context with a unique index on <code>User.Email</code>.</p>
+        <p><span class="k">How</span>Uses the primary constructor to accept <code>DbContextOptions</code>. The <code>OnModelCreating</code> override creates a unique index on the email column so duplicate registrations are caught at the database level.</p>
+      </div>
+
+      <div class="fn">
+        <header><code>User</code> entity<span class="chip plain">Models/User.cs</span></header>
+        <p><span class="k">What</span>The database model for a user account.</p>
+        <p><span class="k">How</span>Properties: <code>Id</code> (int, auto-increment PK), <code>Email</code>, <code>PasswordHash</code>, <code>Name</code>, <code>Role</code> (defaults to <code>"Employee"</code>), <code>CreatedAt</code> (defaults to <code>DateTime.UtcNow</code>).</p>
+      </div>
+
+      <div class="fn">
+        <header><code>LoginRequest</code>, <code>RegisterRequest</code>, <code>AuthResponse</code><span class="chip plain">Models/LoginRequest.cs</span></header>
+        <p><span class="k">What</span>The request and response DTOs, defined as C# records.</p>
+        <p><span class="k">How</span><code>LoginRequest(Email, Password)</code>, <code>RegisterRequest(Email, Password, Name)</code>, <code>AuthResponse(Token, Email, Name, Role)</code>. Records give value equality and concise syntax.</p>
+      </div>
+    </section>
+
+    <section id="web">
+      <h2>Frontend: every page and function</h2>
+      <p>All paths are under <code>client/src/</code>.</p>
+
+      <h3>App.tsx <span class="chip plain">routing and auth guards</span></h3>
+      <div class="fn">
+        <header><code>App</code><span class="chip plain">App.tsx</span></header>
+        <p><span class="k">What</span>Sets up the router with two routes: <code>/login</code> and <code>/</code>.</p>
+        <p><span class="k">How</span>Wraps everything in <code>AuthProvider</code> and <code>BrowserRouter</code>. Two guard components control access:</p>
+        <ul>
+          <li><code>ProtectedRoute</code>: if <code>user</code> is null, redirects to <code>/login</code>. Otherwise renders children.</li>
+          <li><code>GuestRoute</code>: if <code>user</code> exists, redirects to <code>/</code>. Prevents signed-in users from seeing the login form.</li>
+        </ul>
+      </div>
+
+      <h3>context/AuthContext.tsx <span class="chip plain">auth state management</span></h3>
+      <div class="fn">
+        <header><code>AuthProvider</code><span class="chip plain">AuthContext.tsx</span></header>
+        <p><span class="k">What</span>Provides the auth state and actions to the entire app via React context.</p>
+        <p><span class="k">How</span>On mount, reads <code>localStorage</code> key <code>auth</code> for a previously saved session (wrapped in try/catch in case the stored value is malformed). Exposes three values:</p>
+        <ul>
+          <li><code>user</code> &mdash; the current auth state (<code>token</code>, <code>email</code>, <code>name</code>, <code>role</code>) or <code>null</code>.</li>
+          <li><code>setAuth(res)</code> &mdash; saves the auth response to state and <code>localStorage</code>.</li>
+          <li><code>logout()</code> &mdash; clears the state and removes <code>localStorage</code>. No server call: the server keeps no session.</li>
+        </ul>
+      </div>
+
+      <h3>pages/LoginPage.tsx <span class="chip plain">the sign-in page</span></h3>
+      <div class="fn">
+        <header><code>LoginPage</code><span class="chip plain">LoginPage.tsx</span></header>
+        <p><span class="k">What</span>Shows a form that toggles between sign-in and registration modes.</p>
+        <p><span class="k">How</span>Six pieces of state: <code>isRegister</code> (toggle), <code>email</code>, <code>password</code>, <code>name</code> (register only), <code>error</code>, <code>loading</code>. Both modes share the same form; the name field appears only in register mode. On submit:</p>
+        <ul>
+          <li>Calls <code>login()</code> or <code>register()</code> from <code>api/auth.ts</code>.</li>
+          <li>On success: <code>setAuth(res)</code> saves the session, <code>navigate("/")</code> goes to the home page.</li>
+          <li>On failure: the error message shows in red above the form. The button re-enables via <code>finally</code>.</li>
+        </ul>
+      </div>
+
+      <h3>api/auth.ts <span class="chip plain">talking to the server</span></h3>
+      <div class="fn">
+        <header><code>login(email, password)</code> and <code>register(email, password, name)</code><span class="chip plain">api/auth.ts</span></header>
+        <p><span class="k">What</span>Send credentials to the API and return the <code>AuthResponse</code>.</p>
+        <p><span class="k">How</span>Plain <code>fetch</code> calls to <code>http://localhost:5230/api/auth/login</code> and <code>/register</code>. Both send JSON, check <code>res.ok</code>, and throw on failure. The error message from the server (if JSON) is preserved in the thrown error.</p>
+<pre><code>const res = await fetch(`${API}/login`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, password }),
+});
+if (!res.ok) throw new Error("Invalid credentials");
+return res.json();</code></pre>
+      </div>
+
+      <h3>pages/HomePage.tsx <span class="chip plain">post-login landing</span></h3>
+      <div class="fn">
+        <header><code>HomePage</code><span class="chip plain">HomePage.tsx</span></header>
+        <p><span class="k">What</span>A placeholder landing page shown after login.</p>
+        <p><span class="k">How</span>Reads <code>user</code> from <code>useAuth()</code> to display the user's name and role. A sign-out button calls <code>logout()</code>, which clears the context and <code>localStorage</code>, sending the user back to the login form via the <code>ProtectedRoute</code> redirect.</p>
+      </div>
+    </section>
+
+    <section id="token">
+      <h2>The token itself</h2>
+      <p>A JWT is three base64url pieces joined by dots: <code>header.payload.signature</code>. The values below illustrate the shape.</p>
+      <div class="jwt">
+        <div><h4>Header</h4><pre>{
+  "alg": "HS256",
+  "typ": "JWT"
+}</pre></div>
+        <div><h4>Payload (claims)</h4><pre>{
+  "http://.../nameidentifier": "1",
+  "http://.../emailaddress": "alice@co.com",
+  "http://.../name": "Alice",
+  "http://.../role": "Employee",
+  "exp": 1791325015,
+  "iss": "CanteenApi",
+  "aud": "CanteenApp"
+}</pre></div>
+        <div><h4>Signature</h4><pre>HMAC-SHA256(
+  base64url(header) + "." +
+  base64url(payload),
+  Jwt:Key from appsettings
+)</pre></div>
+      </div>
+      <div class="scroll"><table>
+        <thead><tr><th>Claim</th><th>Meaning</th><th>Used by</th></tr></thead>
+        <tbody>
+          <tr><td><code>NameIdentifier</code></td><td>The user's database id</td><td>Identifies the user on protected endpoints</td></tr>
+          <tr><td><code>Email</code></td><td>The user's email address</td><td>Returned by <code>/api/auth/me</code></td></tr>
+          <tr><td><code>Name</code></td><td>The user's display name</td><td>Returned by <code>/api/auth/me</code></td></tr>
+          <tr><td><code>Role</code></td><td><code>Employee</code> (default)</td><td>Used for role-based authorization</td></tr>
+          <tr><td><code>exp</code></td><td>Expiry: 8 hours from issue</td><td>Checked by JWT Bearer middleware</td></tr>
+          <tr><td><code>iss</code></td><td><code>CanteenApi</code></td><td>Validated by JWT Bearer middleware</td></tr>
+          <tr><td><code>aud</code></td><td><code>CanteenApp</code></td><td>Validated by JWT Bearer middleware</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note">
+        <p>.NET uses full URI claim types (e.g. <code>http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress</code>) by default, not short names like <code>sub</code> or <code>role</code>. This is a .NET convention; the token is still a standard JWT.</p>
+      </div>
+      <p>The payload is encoded, <strong>not encrypted</strong>: anyone holding the token can read it. What they cannot do is change it, because the signature would no longer match.</p>
+    </section>
+
+    <section id="errors">
+      <h2>Failure cases</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>What goes wrong</th><th>Where it is caught</th><th>What the user sees</th></tr></thead>
+        <tbody>
+          <tr><td>Email field empty or not an email</td><td>Browser form validation (<code>type="email"</code>, <code>required</code>)</td><td>The browser's own message; nothing is sent</td></tr>
+          <tr><td>Password shorter than 6 characters</td><td>Browser form validation (<code>minLength={6}</code>)</td><td>The browser's own message</td></tr>
+          <tr><td>Unknown email</td><td><code>/api/auth/login</code>: <code>FirstOrDefault</code> returns null</td><td>"Invalid credentials" (generic)</td></tr>
+          <tr><td>Wrong password</td><td><code>/api/auth/login</code>: <code>BCrypt.Verify</code> returns false</td><td>Same generic message</td></tr>
+          <tr><td>Duplicate email on register</td><td><code>/api/auth/register</code>: <code>AnyAsync</code> check</td><td>"Email already registered"</td></tr>
+          <tr><td>API down</td><td><code>fetch</code> throws in <code>api/auth.ts</code></td><td>"Something went wrong" under the form</td></tr>
+          <tr><td>Token expired</td><td>JWT Bearer middleware rejects the request</td><td>Protected endpoints return 401; frontend should redirect to login</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note">
+        <p>Wrong-password and unknown-email both return the same 401 with no body. This is intentional: it stops anyone from discovering which emails have accounts.</p>
+      </div>
+    </section>
+
+    <section id="security">
+      <h2>Security notes</h2>
+      <div class="cols">
+        <div>
+          <h3>What is in place</h3>
+          <ul>
+            <li>Passwords stored only as BCrypt hashes, never in plain text or in any API response.</li>
+            <li>Signature, expiry, issuer and audience checked on every request by ASP.NET middleware.</li>
+            <li>Algorithm implicitly pinned to HMAC variants by the <code>SymmetricSecurityKey</code> type.</li>
+            <li>CORS restricted to the frontend origin.</li>
+            <li>Identical error for wrong-password and unknown-email.</li>
+            <li>Unique index on email prevents duplicate accounts at the database level.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Known gaps</h3>
+          <div class="note warn">
+            <p>Worth fixing before real users.</p>
+          </div>
+          <ul>
+            <li><strong>No startup guard.</strong> The API does not validate that <code>Jwt:Key</code> is present or strong enough at startup.</li>
+            <li><strong>Stale tokens.</strong> A token is trusted for 8 hours. Deactivating a user does not revoke existing tokens.</li>
+            <li><strong><code>localStorage</code> storage.</strong> Injected script (XSS) could read the token. An httpOnly cookie is safer.</li>
+            <li><strong>No rate limit</strong> on login attempts.</li>
+            <li><strong>No session restore check.</strong> The frontend trusts <code>localStorage</code> on load without calling <code>/api/auth/me</code> to verify the token is still valid.</li>
+            <li><strong>No email normalization.</strong> The API does not trim or lowercase emails before lookup.</li>
+            <li><strong>No token refresh.</strong> After 8 hours the user must sign in again.</li>
+            <li><strong>HTTPS</strong> is required in any real deployment, or the password travels in clear text.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="run">
+      <h2>Running it</h2>
+      <div class="cols">
+        <div>
+          <h3>Backend</h3>
+<pre><code>cd server
+dotnet run</code></pre>
+          <p>Starts on <code>http://localhost:5230</code>. SQLite file <code>canteen.db</code> is auto-created on first run.</p>
+        </div>
+        <div>
+          <h3>Frontend</h3>
+<pre><code>cd client
+npm run dev</code></pre>
+          <p>Starts on <code>http://localhost:5173</code>. Open this URL in a browser to use the app.</p>
+        </div>
+      </div>
+      <div class="note">
+        <p>Start the backend first. The frontend calls the API directly at <code>localhost:5230</code> &mdash; there is no proxy configured in Vite, so the backend must be running for login to work.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>Source: <code>server/</code> and <code>client/src/</code> at the time of writing. If the code changes, this page needs the same update.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>
