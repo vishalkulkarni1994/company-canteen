@@ -8,6 +8,8 @@ public class CanteenDbContext(DbContextOptions<CanteenDbContext> options) : DbCo
     public DbSet<User> Users => Set<User>();
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<DailyStock> DailyStocks => Set<DailyStock>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -18,5 +20,11 @@ public class CanteenDbContext(DbContextOptions<CanteenDbContext> options) : DbCo
 
         modelBuilder.Entity<DailyStock>()
             .HasIndex(s => new { s.MenuItemId, s.Date }).IsUnique();
+
+        modelBuilder.Entity<Order>()
+            .Property(o => o.TotalAmount).HasPrecision(10, 2);
+
+        modelBuilder.Entity<OrderItem>()
+            .Property(oi => oi.UnitPrice).HasPrecision(8, 2);
     }
 }

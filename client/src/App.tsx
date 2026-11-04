@@ -4,6 +4,8 @@ import LoginPage from "./pages/LoginPage";
 import TodayMenuPage from "./pages/TodayMenuPage";
 import MenuPage from "./pages/MenuPage";
 import StockPage from "./pages/StockPage";
+import OrdersPage from "./pages/OrdersPage";
+import KitchenPage from "./pages/KitchenPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -29,8 +31,10 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
           <Route path="/" element={<ProtectedRoute><TodayMenuPage /></ProtectedRoute>} />
+          <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
           <Route path="/admin/menu" element={<AdminRoute><MenuPage /></AdminRoute>} />
           <Route path="/admin/stock" element={<AdminRoute><StockPage /></AdminRoute>} />
+          <Route path="/admin/orders" element={<AdminRoute><KitchenPage /></AdminRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

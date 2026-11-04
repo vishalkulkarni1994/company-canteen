@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getTodayStock, type TodayStockItem } from "../api/menu";
+import { placeOrder, type CartItem } from "../api/orders";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -10,6 +11,10 @@ export default function TodayMenuPage() {
   const [filter, setFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [cart, setCart] = useState<Map<number, CartItem>>(new Map());
+  const [showCart, setShowCart] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState("");
 
   useEffect(() => {
     getTodayStock()
@@ -20,6 +25,80 @@ export default function TodayMenuPage() {
 
   const categories = [...new Set(items.map((i) => i.category))];
   const filtered = filter ? items.filter((i) => i.category === filter) : items;
+  const cartTotal = Array.from(cart.values()).reduce(
+    (sum, c) => sum + c.price * c.quantity,
+    0
+  );
+  const cartCount = Array.from(cart.values()).reduce(
+    (sum, c) => sum + c.quantity,
+    0
+  );
+
+  function addToCart(item: TodayStockItem) {
+    setCart((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(item.menuItemId);
+      if (existing) {
+        if (existing.quantity < item.remaining) {
+          next.set(item.menuItemId, { ...existing, quantity: existing.quantity + 1 });
+        }
+      } else {
+        next.set(item.menuItemId, {
+          menuItemId: item.menuItemId,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          remaining: item.remaining,
+        });
+      }
+      return next;
+    });
+  }
+
+  function updateCartQty(menuItemId: number, qty: number) {
+    setCart((prev) => {
+      const next = new Map(prev);
+      if (qty <= 0) {
+        next.delete(menuItemId);
+      } else {
+        const existing = next.get(menuItemId);
+        if (existing) {
+          next.set(menuItemId, { ...existing, quantity: Math.min(qty, existing.remaining) });
+        }
+      }
+      return next;
+    });
+  }
+
+  function removeFromCart(menuItemId: number) {
+    setCart((prev) => {
+      const next = new Map(prev);
+      next.delete(menuItemId);
+      return next;
+    });
+  }
+
+  async function handlePlaceOrder() {
+    setPlacing(true);
+    setError("");
+    try {
+      const orderItems = Array.from(cart.values()).map((c) => ({
+        menuItemId: c.menuItemId,
+        quantity: c.quantity,
+      }));
+      const order = await placeOrder(orderItems);
+      setCart(new Map());
+      setShowCart(false);
+      setOrderSuccess(`Order #${order.id} placed! Total: ₹${order.totalAmount}`);
+      const refreshed = await getTodayStock();
+      setItems(refreshed);
+      setTimeout(() => setOrderSuccess(""), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to place order");
+    } finally {
+      setPlacing(false);
+    }
+  }
 
   return (
     <div style={styles.container}>
@@ -31,20 +110,26 @@ export default function TodayMenuPage() {
         <div style={styles.headerActions}>
           {user?.role === "Admin" && (
             <>
-              <button
-                onClick={() => navigate("/admin/menu")}
-                style={styles.navBtn}
-              >
+              <button onClick={() => navigate("/admin/menu")} style={styles.navBtn}>
                 Manage Menu
               </button>
-              <button
-                onClick={() => navigate("/admin/stock")}
-                style={styles.navBtn}
-              >
+              <button onClick={() => navigate("/admin/stock")} style={styles.navBtn}>
                 Set Stock
+              </button>
+              <button onClick={() => navigate("/admin/orders")} style={styles.navBtn}>
+                Orders
               </button>
             </>
           )}
+          <button onClick={() => navigate("/orders")} style={styles.navBtn}>
+            My Orders
+          </button>
+          <button
+            onClick={() => setShowCart(!showCart)}
+            style={styles.cartBtn}
+          >
+            Cart ({cartCount})
+          </button>
           <button onClick={logout} style={styles.logoutBtn}>
             Sign Out
           </button>
@@ -52,6 +137,61 @@ export default function TodayMenuPage() {
       </div>
 
       {error && <p style={styles.error}>{error}</p>}
+      {orderSuccess && <p style={styles.success}>{orderSuccess}</p>}
+
+      {showCart && (
+        <div style={styles.cartPanel}>
+          <h3 style={styles.cartTitle}>Your Cart</h3>
+          {cart.size === 0 ? (
+            <p style={styles.cartEmpty}>Cart is empty</p>
+          ) : (
+            <>
+              {Array.from(cart.values()).map((c) => (
+                <div key={c.menuItemId} style={styles.cartRow}>
+                  <div style={styles.cartItemInfo}>
+                    <span style={styles.cartItemName}>{c.name}</span>
+                    <span style={styles.cartItemPrice}>
+                      ₹{c.price} x {c.quantity} = ₹{c.price * c.quantity}
+                    </span>
+                  </div>
+                  <div style={styles.cartControls}>
+                    <button
+                      onClick={() => updateCartQty(c.menuItemId, c.quantity - 1)}
+                      style={styles.qtyBtn}
+                    >
+                      -
+                    </button>
+                    <span style={styles.qtyDisplay}>{c.quantity}</span>
+                    <button
+                      onClick={() => updateCartQty(c.menuItemId, c.quantity + 1)}
+                      style={styles.qtyBtn}
+                      disabled={c.quantity >= c.remaining}
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => removeFromCart(c.menuItemId)}
+                      style={styles.removeBtn}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div style={styles.cartFooter}>
+                <span style={styles.cartTotal}>Total: ₹{cartTotal}</span>
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={placing}
+                  style={styles.placeOrderBtn}
+                >
+                  {placing ? "Placing..." : "Place Order"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {!loading && items.length > 0 && (
         <div style={styles.filters}>
@@ -89,35 +229,47 @@ export default function TodayMenuPage() {
         </div>
       ) : (
         <div style={styles.grid}>
-          {filtered.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                ...styles.card,
-                opacity: item.remaining === 0 ? 0.6 : 1,
-              }}
-            >
-              <div style={styles.cardTop}>
-                <div style={styles.cardHeader}>
-                  <h3 style={styles.cardName}>{item.name}</h3>
-                  <span style={styles.price}>₹{item.price}</span>
+          {filtered.map((item) => {
+            const inCart = cart.get(item.menuItemId);
+            return (
+              <div
+                key={item.id}
+                style={{
+                  ...styles.card,
+                  opacity: item.remaining === 0 ? 0.6 : 1,
+                }}
+              >
+                <div style={styles.cardTop}>
+                  <div style={styles.cardHeader}>
+                    <h3 style={styles.cardName}>{item.name}</h3>
+                    <span style={styles.price}>₹{item.price}</span>
+                  </div>
+                  {item.description && (
+                    <p style={styles.cardDesc}>{item.description}</p>
+                  )}
                 </div>
-                {item.description && (
-                  <p style={styles.cardDesc}>{item.description}</p>
-                )}
+                <div style={styles.cardFooter}>
+                  <div style={styles.cardFooterLeft}>
+                    <span style={styles.chip}>{item.category}</span>
+                    {item.remaining === 0 ? (
+                      <span style={styles.soldOut}>Sold Out</span>
+                    ) : (
+                      <span style={styles.remaining}>{item.remaining} left</span>
+                    )}
+                  </div>
+                  {item.remaining > 0 && (
+                    <button
+                      onClick={() => addToCart(item)}
+                      disabled={inCart !== undefined && inCart.quantity >= item.remaining}
+                      style={inCart ? styles.addedBtn : styles.addBtn}
+                    >
+                      {inCart ? `${inCart.quantity} in cart` : "Add"}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div style={styles.cardFooter}>
-                <span style={styles.chip}>{item.category}</span>
-                {item.remaining === 0 ? (
-                  <span style={styles.soldOut}>Sold Out</span>
-                ) : (
-                  <span style={styles.remaining}>
-                    {item.remaining} left
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -143,6 +295,75 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "8px 12px",
     borderRadius: 6,
     marginBottom: 16,
+  },
+  success: {
+    color: "#15803d",
+    background: "#f0fdf4",
+    padding: "8px 12px",
+    borderRadius: 6,
+    marginBottom: 16,
+  },
+  cartPanel: {
+    background: "#fff",
+    border: "1px solid #e2e8f0",
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 20,
+  },
+  cartTitle: { margin: "0 0 12px", fontSize: 18, fontWeight: 600 },
+  cartEmpty: { color: "#888", margin: 0 },
+  cartRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "8px 0",
+    borderBottom: "1px solid #f1f5f9",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  cartItemInfo: { display: "flex", flexDirection: "column", gap: 2 },
+  cartItemName: { fontWeight: 600, fontSize: 14 },
+  cartItemPrice: { fontSize: 13, color: "#666" },
+  cartControls: { display: "flex", alignItems: "center", gap: 6 },
+  qtyBtn: {
+    width: 28,
+    height: 28,
+    background: "#f1f5f9",
+    border: "1px solid #d1d5db",
+    borderRadius: 4,
+    cursor: "pointer",
+    fontSize: 16,
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyDisplay: { fontSize: 14, fontWeight: 600, minWidth: 20, textAlign: "center" },
+  removeBtn: {
+    fontSize: 12,
+    color: "#dc2626",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    marginLeft: 8,
+  },
+  cartFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 14,
+    marginTop: 6,
+  },
+  cartTotal: { fontSize: 18, fontWeight: 700, color: "#0f766e" },
+  placeOrderBtn: {
+    padding: "10px 24px",
+    background: "#0f766e",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: 15,
   },
   filters: {
     display: "flex",
@@ -201,6 +422,7 @@ const styles: Record<string, React.CSSProperties> = {
     paddingTop: 10,
     borderTop: "1px solid #f1f5f9",
   },
+  cardFooterLeft: { display: "flex", alignItems: "center", gap: 8 },
   chip: {
     fontSize: 11,
     fontWeight: 600,
@@ -218,6 +440,26 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#fef2f2",
     color: "#dc2626",
   },
+  addBtn: {
+    padding: "6px 16px",
+    background: "#0f766e",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: 13,
+  },
+  addedBtn: {
+    padding: "6px 16px",
+    background: "#d8eeea",
+    color: "#0f766e",
+    border: "1px solid #0f766e",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: 13,
+  },
   navBtn: {
     padding: "8px 14px",
     background: "#f1f5f9",
@@ -226,6 +468,16 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 6,
     cursor: "pointer",
     fontWeight: 500,
+    fontSize: 13,
+  },
+  cartBtn: {
+    padding: "8px 14px",
+    background: "#0f766e",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontWeight: 600,
     fontSize: 13,
   },
   logoutBtn: {
