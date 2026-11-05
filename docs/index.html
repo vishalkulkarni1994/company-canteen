@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canteen Connect — Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --code-bg: #eaf0ee;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514;
+      --surface: #151f1d;
+      --ink: #e5eeec;
+      --muted: #94a8a2;
+      --line: #25352f;
+      --accent: #5eead4;
+      --accent-soft: #123430;
+      --warn: #fbbf24;
+      --warn-soft: #302509;
+      --code-bg: #101a18;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514;
+    --surface: #151f1d;
+    --ink: #e5eeec;
+    --muted: #94a8a2;
+    --line: #25352f;
+    --accent: #5eead4;
+    --accent-soft: #123430;
+    --warn: #fbbf24;
+    --warn-soft: #302509;
+    --code-bg: #101a18;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--font-body);
+    padding-inline: 16px;
+    padding-block: 24px 64px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  a { color: var(--accent); }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+
+  .phases { display: grid; gap: 20px; margin: 32px 0; }
+  .phase { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; text-decoration: none; color: inherit; transition: border-color .2s, box-shadow .2s; }
+  .phase:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .phase-num { font: 700 32px/1 var(--font-display); color: var(--accent); opacity: .5; padding-top: 4px; }
+  .phase h3 { font: 700 22px/1.2 var(--font-display); margin: 0 0 6px; }
+  .phase p { margin: 0 0 8px; color: var(--muted); font-size: 15px; max-width: none; }
+  .phase .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .arch { display: block; margin: 24px 0; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; color: inherit; transition: border-color .2s, box-shadow .2s; }
+  .arch:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .arch h3 { font: 700 18px/1.2 var(--font-display); margin: 0 0 4px; }
+  .arch p { margin: 0; color: var(--muted); font-size: 14px; max-width: none; }
+
+  section { padding-block: 32px 8px; border-top: 1px solid var(--line); margin-top: 32px; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+
+  @media (max-width: 640px) {
+    .phase { grid-template-columns: minmax(0, 1fr); }
+    .phase-num { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">company-canteen</p>
+    <h1>Documentation</h1>
+    <p class="lede">Phase-by-phase technical documentation for the company canteen ordering system. Each phase builds on the last, from authentication to real-time notifications.</p>
+  </header>
+
+  <div class="phases">
+    <a class="phase" href="login-flow.html">
+      <div class="phase-num">01</div>
+      <div>
+        <h3>Authentication</h3>
+        <p>JWT-based login and registration with BCrypt password hashing, role-based access control (Employee / Admin), and a React auth context with protected routes.</p>
+        <div class="meta">
+          <span class="chip">AuthController</span>
+          <span class="chip">JWT Bearer</span>
+          <span class="chip">BCrypt</span>
+          <span class="chip plain">AuthContext</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="phase" href="menu-management.html">
+      <div class="phase-num">02</div>
+      <div>
+        <h3>Menu &amp; stock management</h3>
+        <p>Admin CRUD for menu items with categories, daily stock control with date-specific quantities, and the today's menu endpoint that employees see.</p>
+        <div class="meta">
+          <span class="chip">MenuController</span>
+          <span class="chip">StockController</span>
+          <span class="chip">DailyStock</span>
+          <span class="chip plain">DateOnly</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="phase" href="ordering-flow.html">
+      <div class="phase-num">03</div>
+      <div>
+        <h3>Ordering flow</h3>
+        <p>End-to-end ordering with an in-memory cart, atomic stock decrement on placement, a status state machine (Placed &rarr; Preparing &rarr; Ready &rarr; Collected), employee order history, and a kitchen kanban board.</p>
+        <div class="meta">
+          <span class="chip">OrderController</span>
+          <span class="chip">7 endpoints</span>
+          <span class="chip">Kitchen kanban</span>
+          <span class="chip plain">Stock atomicity</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="phase" href="notifications.html">
+      <div class="phase-num">04</div>
+      <div>
+        <h3>Order-ready notifications</h3>
+        <p>Polling-based toast notifications that alert employees when their order moves to &ldquo;Ready&rdquo;. Uses a custom React hook with a ref-based status map and auto-dismissing toasts.</p>
+        <div class="meta">
+          <span class="chip">useOrderNotifications</span>
+          <span class="chip">Toast.tsx</span>
+          <span class="chip">10s polling</span>
+          <span class="chip warn">SignalR planned</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <section>
+    <h2>Architecture</h2>
+    <a class="arch" href="architecture.svg">
+      <h3>System architecture diagram &rarr;</h3>
+      <p>React + .NET 10 + SQLite &mdash; built components (solid) and planned modules (dashed). Shows controllers, database tables, and the notification polling path.</p>
+    </a>
+  </section>
+
+  <section>
+    <h2>Tech stack</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;">
+        <strong style="display:block;margin-bottom:4px;">Frontend</strong>
+        <span style="font-size:14px;color:var(--muted);">React 19 &middot; TypeScript &middot; Vite &middot; React Router v7</span>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;">
+        <strong style="display:block;margin-bottom:4px;">Backend</strong>
+        <span style="font-size:14px;color:var(--muted);">.NET 10 &middot; Minimal Controllers &middot; EF Core &middot; JWT</span>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;">
+        <strong style="display:block;margin-bottom:4px;">Database</strong>
+        <span style="font-size:14px;color:var(--muted);">SQLite &middot; EF Core code-first &middot; auto-created</span>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;">
+        <strong style="display:block;margin-bottom:4px;">Auth</strong>
+        <span style="font-size:14px;color:var(--muted);">JWT Bearer &middot; BCrypt &middot; Role-based (Admin/Employee)</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>company-canteen &mdash; documentation for the company canteen ordering system.</p>
+  </footer>
+</div>
+</body>
+</html>

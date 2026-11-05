@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canteen Connect — Ordering Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --code-bg: #eaf0ee;
+    --phase: #6d28d9;
+    --phase-soft: #f0ebff;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514;
+      --surface: #151f1d;
+      --ink: #e5eeec;
+      --muted: #94a8a2;
+      --line: #25352f;
+      --accent: #5eead4;
+      --accent-soft: #123430;
+      --warn: #fbbf24;
+      --warn-soft: #302509;
+      --code-bg: #101a18;
+      --phase: #a78bfa;
+      --phase-soft: #1e1538;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514;
+    --surface: #151f1d;
+    --ink: #e5eeec;
+    --muted: #94a8a2;
+    --line: #25352f;
+    --accent: #5eead4;
+    --accent-soft: #123430;
+    --warn: #fbbf24;
+    --warn-soft: #302509;
+    --code-bg: #101a18;
+    --phase: #a78bfa;
+    --phase-soft: #1e1538;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--font-body);
+    padding-inline: 16px;
+    padding-block: 24px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    nav.toc { position: static; }
+    nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+  nav.toc { position: sticky; top: 16px; align-self: start; padding-top: 8px; font-size: 14px; }
+  nav.toc p { margin: 0 0 8px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+
+  main { min-width: 0; }
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font: 600 18px/1.3 var(--font-display); margin: 28px 0 8px; }
+  h4 { font: 600 15px/1.3 var(--font-display); margin: 20px 0 6px; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  section { padding-block: 40px 8px; border-top: 1px solid var(--line); margin-top: 32px; scroll-margin-top: 16px; }
+  header.top + section { margin-top: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; max-width: 72ch; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+
+  code { font: 500 .88em var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; font: 400 13.5px/1.55 var(--font-mono); }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .scroll { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.phase { background: var(--phase-soft); color: var(--phase); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 18px; max-width: 72ch; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .cols > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .cols h3 { margin-top: 0; }
+  .cols p:last-child, .cols ul:last-child { margin-bottom: 0; }
+
+  .fn { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px 6px; margin: 0 0 16px; }
+  .fn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+  .fn > header code { font-size: 15px; background: none; padding: 0; color: var(--accent); }
+  .fn p { max-width: none; }
+  .fn .k { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+  .fn pre { margin-top: 4px; }
+
+  ol.trace { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; margin: 0 0 18px; max-width: none; }
+  ol.trace li { counter-increment: s; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  ol.trace li::before { content: counter(s); font: 600 14px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  ol.trace li > div > :last-child { margin-bottom: 0; }
+  ol.trace b { display: block; margin-bottom: 2px; }
+
+  .phase-banner { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; padding: 14px 18px; background: var(--phase-soft); border: 1px solid var(--phase); border-radius: 8px; }
+  .phase-banner .num { font: 700 28px/1 var(--font-display); color: var(--phase); }
+  .phase-banner .title { font: 600 18px/1.2 var(--font-display); color: var(--ink); }
+  .phase-banner .desc { font-size: 14px; color: var(--muted); margin: 2px 0 0; }
+
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 0 0 20px; }
+  .diagram svg { display: block; min-width: 720px; width: 100%; height: auto; }
+
+  .jwt { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .jwt > div { min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px 14px; }
+  .jwt h4 { margin: 0 0 6px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .jwt pre { margin: 0; border: 0; padding: 0; background: none; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#statuses">Order status machine</a></li>
+      <li><a href="#schema">Database schema</a></li>
+      <li><a href="#phase1">Phase 1: Order entities</a></li>
+      <li><a href="#phase2">Phase 2: Order API</a></li>
+      <li><a href="#phase3">Phase 3: Cart + checkout</a></li>
+      <li><a href="#phase4">Phase 4: Order history</a></li>
+      <li><a href="#phase5">Phase 5: Kitchen kanban</a></li>
+      <li><a href="#phase6">Phase 6: Notifications</a></li>
+      <li><a href="#files">Files changed</a></li>
+      <li><a href="#next">What comes next</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">company-canteen &middot; ordering &amp; notifications</p>
+      <h1>Placing &amp; tracking orders</h1>
+      <p class="lede">From browsing today's menu to getting a toast when your food is ready: cart management, order placement with atomic stock decrement, a kitchen kanban for admins, and polling-based notifications. Every entity, every endpoint, every component.</p>
+    </header>
+
+    <!-- ================================================================ -->
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>The ordering system sits on top of the menu and stock layers built in phase&nbsp;2. An employee browses today's available items, adds them to an in-memory cart, and places an order. The server atomically decrements stock, calculates totals, and records the order. Admin users manage the kitchen via a kanban board, advancing orders through a strict status state machine. Employees see their order history and receive real-time toast notifications when an order becomes ready for pickup.</p>
+      <div class="cols">
+        <div>
+          <h3>Cart <span class="chip plain">client-side</span></h3>
+          <p>A <code>Map&lt;number, CartItem&gt;</code> held in React state. No server-side cart &mdash; items are collected locally and sent in one <code>POST</code> when the user clicks <strong>Place Order</strong>.</p>
+        </div>
+        <div>
+          <h3>Order <span class="chip plain">server-side</span></h3>
+          <p>An <code>Order</code> entity with child <code>OrderItem</code> rows. Tracks status, total amount, and timestamps. Stock is decremented on placement and restored on cancellation.</p>
+        </div>
+        <div>
+          <h3>Notifications <span class="chip plain">polling</span></h3>
+          <p>A <code>useOrderNotifications</code> hook polls <code>/api/order/my/active</code> every 10&nbsp;seconds. When an order transitions to <strong>Ready</strong>, a toast appears with auto-dismiss.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="statuses">
+      <h2>Order status machine</h2>
+      <p>Every order follows a strict state machine. Transitions are enforced server-side in <code>OrderController</code> using an <code>AllowedTransitions</code> dictionary. Any attempt to skip a state or go backwards returns <code>400 Bad Request</code>.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 780 160" role="img" aria-label="Order status state machine diagram">
+          <!-- Placed -->
+          <rect x="20" y="50" width="120" height="60" rx="8" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.4"/>
+          <text x="80" y="85" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="#1d4ed8">Placed</text>
+
+          <!-- Arrow: Placed -> Preparing -->
+          <path d="M140 80 H200" stroke="var(--ink)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+          <text x="170" y="72" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">admin</text>
+
+          <!-- Preparing -->
+          <rect x="200" y="50" width="140" height="60" rx="8" fill="#fef3c7" stroke="#92400e" stroke-width="1.4"/>
+          <text x="270" y="85" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="#92400e">Preparing</text>
+
+          <!-- Arrow: Preparing -> Ready -->
+          <path d="M340 80 H400" stroke="var(--ink)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+          <text x="370" y="72" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">admin</text>
+
+          <!-- Ready -->
+          <rect x="400" y="50" width="120" height="60" rx="8" fill="#d1fae5" stroke="#065f46" stroke-width="1.4"/>
+          <text x="460" y="85" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="#065f46">Ready</text>
+
+          <!-- Arrow: Ready -> Collected -->
+          <path d="M520 80 H580" stroke="var(--ink)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+          <text x="550" y="72" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">admin</text>
+
+          <!-- Collected -->
+          <rect x="580" y="50" width="140" height="60" rx="8" fill="#f1f5f9" stroke="#475569" stroke-width="1.4"/>
+          <text x="650" y="85" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="#475569">Collected</text>
+
+          <!-- Arrow: Placed -> Cancelled -->
+          <path d="M80 110 V135 H260" stroke="#dc2626" stroke-width="1.5" fill="none" stroke-dasharray="5 4" marker-end="url(#arrow-red)"/>
+          <text x="170" y="148" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="#dc2626">employee cancel</text>
+
+          <!-- Cancelled -->
+          <rect x="260" y="120" width="130" height="40" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.4"/>
+          <text x="325" y="145" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="#dc2626">Cancelled</text>
+
+          <defs>
+            <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--ink)"/></marker>
+            <marker id="arrow-red" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#dc2626"/></marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="scroll"><table>
+        <thead><tr><th>From</th><th>Allowed next</th><th>Who</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>Placed</code></td><td><code>Preparing</code></td><td>Admin</td><td>Kitchen starts making the order</td></tr>
+          <tr><td><code>Placed</code></td><td><code>Cancelled</code></td><td>Employee (owner)</td><td>Stock restored to DailyStock</td></tr>
+          <tr><td><code>Preparing</code></td><td><code>Ready</code></td><td>Admin</td><td>Triggers notification toast for employee</td></tr>
+          <tr><td><code>Ready</code></td><td><code>Collected</code></td><td>Admin</td><td>Order leaves active set; removed from kanban</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <p>Cancellation is only allowed from the <strong>Placed</strong> state. Once the kitchen starts preparing, the food is committed. The employee must own the order to cancel it.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="schema">
+      <h2>Database schema</h2>
+      <p>Two new tables join the existing <code>Users</code>, <code>MenuItems</code>, and <code>DailyStock</code> tables.</p>
+
+      <h3>Orders table</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>Id</code></td><td>int</td><td>PK, auto-increment</td><td>Unique order identifier</td></tr>
+          <tr><td><code>UserId</code></td><td>int</td><td>FK &rarr; Users.Id</td><td>Who placed it</td></tr>
+          <tr><td><code>Status</code></td><td>string</td><td>required</td><td>Placed, Preparing, Ready, Collected, or Cancelled</td></tr>
+          <tr><td><code>TotalAmount</code></td><td>decimal</td><td></td><td>Sum of all item subtotals</td></tr>
+          <tr><td><code>CreatedAt</code></td><td>DateTime</td><td>default UtcNow</td><td>When the order was placed</td></tr>
+          <tr><td><code>UpdatedAt</code></td><td>DateTime</td><td>default UtcNow</td><td>Last status change time</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>OrderItems table</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>Id</code></td><td>int</td><td>PK, auto-increment</td><td>Line item identifier</td></tr>
+          <tr><td><code>OrderId</code></td><td>int</td><td>FK &rarr; Orders.Id</td><td>Parent order</td></tr>
+          <tr><td><code>MenuItemId</code></td><td>int</td><td>FK &rarr; MenuItems.Id</td><td>Which dish</td></tr>
+          <tr><td><code>Quantity</code></td><td>int</td><td>required, &gt; 0</td><td>How many servings</td></tr>
+          <tr><td><code>UnitPrice</code></td><td>decimal</td><td>required</td><td>Price at time of order</td></tr>
+          <tr><td><code>Subtotal</code></td><td>decimal</td><td>computed</td><td>Quantity &times; UnitPrice</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Entity relationship</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 780 200" role="img" aria-label="ER diagram showing Users, Orders, OrderItems, and MenuItems tables">
+          <defs>
+            <marker id="fk" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--accent)"/></marker>
+          </defs>
+          <rect x="20" y="30" width="160" height="140" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+          <text x="100" y="56" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--ink)">Users</text>
+          <text x="36" y="78" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Id (PK)</text>
+          <text x="36" y="96" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Email, Name</text>
+          <text x="36" y="114" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Role</text>
+
+          <rect x="230" y="30" width="160" height="140" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+          <text x="310" y="56" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--ink)">Orders</text>
+          <text x="246" y="78" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Id (PK)</text>
+          <text x="246" y="96" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">UserId (FK)</text>
+          <text x="246" y="114" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Status, Total</text>
+          <text x="246" y="132" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">CreatedAt, UpdatedAt</text>
+
+          <rect x="440" y="30" width="160" height="140" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+          <text x="520" y="56" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--ink)">OrderItems</text>
+          <text x="456" y="78" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Id (PK)</text>
+          <text x="456" y="96" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">OrderId (FK)</text>
+          <text x="456" y="114" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">MenuItemId (FK)</text>
+          <text x="456" y="132" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Qty, UnitPrice</text>
+
+          <rect x="650" y="50" width="110" height="100" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+          <text x="705" y="76" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--ink)">MenuItems</text>
+          <text x="666" y="98" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Id (PK)</text>
+          <text x="666" y="116" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Name, Price</text>
+          <text x="666" y="134" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">Category</text>
+
+          <path d="M180 100 H228" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#fk)"/>
+          <text x="204" y="92" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent)">1 : N</text>
+
+          <path d="M390 100 H438" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#fk)"/>
+          <text x="414" y="92" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent)">1 : N</text>
+
+          <path d="M600 100 H648" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#fk)"/>
+          <text x="624" y="92" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent)">N : 1</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase1">
+      <h2>Phase 1: Order entities</h2>
+      <div class="phase-banner">
+        <div class="num">1</div>
+        <div><div class="title">EF Core models and DTOs</div><div class="desc">Add Order and OrderItem entities, the request/response records, and update the DbContext.</div></div>
+      </div>
+
+      <h3>Models/Order.cs</h3>
+      <div class="fn">
+        <header><code>Order</code> + <code>OrderItem</code><span class="chip phase">phase 1</span></header>
+        <p>The <code>Order</code> entity holds the header: who placed it, its current status, total amount, and timestamps. <code>OrderItem</code> is the line item: which dish, how many, and the unit price at the time of ordering (price is captured, not referenced, so menu price changes don't alter past orders).</p>
+<pre><code>public class Order
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public User User { get; set; } = null!;
+    public required string Status { get; set; }
+    public decimal TotalAmount { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public ICollection&lt;OrderItem&gt; Items { get; set; } = [];
+}
+
+public class OrderItem
+{
+    public int Id { get; set; }
+    public int OrderId { get; set; }
+    public int MenuItemId { get; set; }
+    public MenuItem MenuItem { get; set; } = null!;
+    public required int Quantity { get; set; }
+    public required decimal UnitPrice { get; set; }
+    public decimal Subtotal =&gt; Quantity * UnitPrice;
+}</code></pre>
+      </div>
+
+      <h3>Models/OrderDto.cs</h3>
+      <div class="fn">
+        <header><code>PlaceOrderRequest</code> + response records<span class="chip phase">phase 1</span></header>
+        <p>C# records for zero-boilerplate request and response shapes.</p>
+<pre><code>public record PlaceOrderRequest(List&lt;OrderLineRequest&gt; Items);
+public record OrderLineRequest(int MenuItemId, int Quantity);
+
+public record OrderResponse(
+    int Id, string Status, decimal TotalAmount,
+    DateTime CreatedAt, DateTime UpdatedAt,
+    List&lt;OrderItemResponse&gt; Items);
+
+public record OrderItemResponse(
+    int Id, int MenuItemId, string Name, string Category,
+    int Quantity, decimal UnitPrice, decimal Subtotal);
+
+public record UpdateStatusRequest(string Status);</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase2">
+      <h2>Phase 2: Order API</h2>
+      <div class="phase-banner">
+        <div class="num">2</div>
+        <div><div class="title">OrderController with all endpoints</div><div class="desc">Place orders, query history, advance status, cancel &mdash; with stock management and role-based access.</div></div>
+      </div>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Method</th><th>Route</th><th>Auth</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip">POST</span></td><td><code>/api/order</code></td><td>Any user</td><td>Place a new order (decrements stock)</td></tr>
+          <tr><td><span class="chip plain">GET</span></td><td><code>/api/order/my</code></td><td>Any user</td><td>All orders for the logged-in user</td></tr>
+          <tr><td><span class="chip plain">GET</span></td><td><code>/api/order/my/active</code></td><td>Any user</td><td>Active orders only (for notifications polling)</td></tr>
+          <tr><td><span class="chip plain">GET</span></td><td><code>/api/order/{id}</code></td><td>Owner or Admin</td><td>Single order detail</td></tr>
+          <tr><td><span class="chip plain">GET</span></td><td><code>/api/order/active</code></td><td>Admin only</td><td>All active orders (for kitchen kanban)</td></tr>
+          <tr><td><span class="chip warn">PUT</span></td><td><code>/api/order/{id}/status</code></td><td>Admin only</td><td>Advance order status</td></tr>
+          <tr><td><span class="chip warn">DELETE</span></td><td><code>/api/order/{id}</code></td><td>Owner only</td><td>Cancel order (restores stock)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Place order: atomic stock decrement</h3>
+      <div class="fn">
+        <header><code>POST /api/order</code><span class="chip phase">phase 2</span></header>
+        <p>The critical business logic: for each line item, the server loads today's <code>DailyStock</code> row, checks that enough servings remain (<code>QuantityAvailable - QuantityOrdered &ge; requested</code>), increments <code>QuantityOrdered</code>, and captures the current menu price. Everything happens inside a single <code>SaveChangesAsync</code> call &mdash; either the whole order succeeds or nothing changes.</p>
+<pre><code>[HttpPost]
+public async Task&lt;IActionResult&gt; PlaceOrder([FromBody] PlaceOrderRequest req)
+{
+    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var order = new Order { Status = "Placed", TotalAmount = 0, UserId = userId };
+
+    foreach (var line in req.Items)
+    {
+        var stock = await db.DailyStocks
+            .Include(s =&gt; s.MenuItem)
+            .FirstOrDefaultAsync(s =&gt; s.MenuItemId == line.MenuItemId
+                                     &amp;&amp; s.Date == today
+                                     &amp;&amp; s.MenuItem.IsActive);
+
+        if (stock is null)
+            return BadRequest(new { message = $"Item {line.MenuItemId} is not available today" });
+
+        var remaining = stock.QuantityAvailable - stock.QuantityOrdered;
+        if (line.Quantity &gt; remaining)
+            return BadRequest(new { message = $"Only {remaining} servings left for {stock.MenuItem.Name}" });
+
+        stock.QuantityOrdered += line.Quantity;
+
+        order.Items.Add(new OrderItem
+        {
+            MenuItemId = line.MenuItemId,
+            Quantity = line.Quantity,
+            UnitPrice = stock.MenuItem.Price
+        });
+        order.TotalAmount += line.Quantity * stock.MenuItem.Price;
+    }
+
+    db.Orders.Add(order);
+    await db.SaveChangesAsync();
+    return Created($"/api/order/{order.Id}", ToResponse(order));
+}</code></pre>
+      </div>
+
+      <h3>Cancel order: stock restoration</h3>
+      <div class="fn">
+        <header><code>DELETE /api/order/{id}</code><span class="chip phase">phase 2</span></header>
+        <p>Only allowed from <code>Placed</code> status. The server iterates through each order item and decrements <code>QuantityOrdered</code> on the corresponding <code>DailyStock</code> row, restoring availability for other employees.</p>
+<pre><code>[HttpDelete("{id}")]
+public async Task&lt;IActionResult&gt; CancelOrder(int id)
+{
+    var order = await db.Orders.Include(o =&gt; o.Items)
+        .FirstOrDefaultAsync(o =&gt; o.Id == id);
+
+    if (order is null) return NotFound();
+    if (order.UserId != userId) return Forbid();
+    if (order.Status != "Placed")
+        return BadRequest(new { message = "Only placed orders can be cancelled" });
+
+    order.Status = "Cancelled";
+    order.UpdatedAt = DateTime.UtcNow;
+
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    foreach (var item in order.Items)
+    {
+        var stock = await db.DailyStocks
+            .FirstOrDefaultAsync(s =&gt; s.MenuItemId == item.MenuItemId &amp;&amp; s.Date == today);
+        if (stock is not null)
+            stock.QuantityOrdered -= item.Quantity;
+    }
+
+    await db.SaveChangesAsync();
+    return NoContent();
+}</code></pre>
+      </div>
+
+      <h3>Status transitions</h3>
+      <div class="fn">
+        <header><code>PUT /api/order/{id}/status</code><span class="chip phase">phase 2</span></header>
+        <p>Admin-only endpoint. The <code>AllowedTransitions</code> dictionary enforces the state machine at the controller level &mdash; no invalid transitions can sneak through.</p>
+<pre><code>private static readonly Dictionary&lt;string, string[]&gt; AllowedTransitions = new()
+{
+    ["Placed"]    = ["Preparing", "Cancelled"],
+    ["Preparing"] = ["Ready"],
+    ["Ready"]     = ["Collected"],
+};
+
+[HttpPut("{id}/status")]
+[Authorize(Roles = "Admin")]
+public async Task&lt;IActionResult&gt; UpdateStatus(int id, [FromBody] UpdateStatusRequest req)
+{
+    var order = await db.Orders.Include(o =&gt; o.Items).ThenInclude(oi =&gt; oi.MenuItem)
+        .FirstOrDefaultAsync(o =&gt; o.Id == id);
+
+    if (!AllowedTransitions.TryGetValue(order.Status, out var allowed)
+        || !allowed.Contains(req.Status))
+        return BadRequest(new { message = $"Cannot transition from {order.Status} to {req.Status}" });
+
+    order.Status = req.Status;
+    order.UpdatedAt = DateTime.UtcNow;
+    await db.SaveChangesAsync();
+    return Ok(ToResponse(order));
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase3">
+      <h2>Phase 3: Cart + checkout UI</h2>
+      <div class="phase-banner">
+        <div class="num">3</div>
+        <div><div class="title">Client-side cart in TodayMenuPage</div><div class="desc">In-memory cart with quantity controls, stock-aware limits, and one-click order placement.</div></div>
+      </div>
+
+      <h3>Cart state: Map&lt;number, CartItem&gt;</h3>
+      <p>The cart lives as React state in <code>TodayMenuPage.tsx</code>. Using a <code>Map</code> keyed by <code>menuItemId</code> gives O(1) lookups when checking whether an item is already in the cart and enforcing stock limits.</p>
+
+      <div class="fn">
+        <header><code>CartItem</code> interface<span class="chip phase">phase 3</span></header>
+        <p><span class="k">File</span> <code>client/src/api/orders.ts</code></p>
+<pre><code>export interface CartItem {
+  menuItemId: number;
+  name: string;
+  price: number;
+  quantity: number;
+  remaining: number;  // from today's stock, caps the + button
+}</code></pre>
+      </div>
+
+      <h3>How adding works</h3>
+      <ol class="trace">
+        <li><div>
+          <b>User clicks "Add" on a menu card</b>
+          <p><code>addToCart(item)</code> creates a new <code>Map</code> (immutable update). If the item already exists, quantity increments up to <code>item.remaining</code>. Otherwise, a fresh entry is inserted with quantity 1.</p>
+        </div></li>
+        <li><div>
+          <b>Cart panel opens</b>
+          <p>Shows each item with <strong>&minus;</strong> / <strong>+</strong> buttons. The + button is disabled when <code>quantity &ge; remaining</code>. Clicking &minus; below 1 removes the item entirely.</p>
+        </div></li>
+        <li><div>
+          <b>User clicks "Place Order"</b>
+          <p><code>handlePlaceOrder()</code> maps cart entries to <code>{ menuItemId, quantity }</code> and calls <code>placeOrder(items)</code>. On success, the cart clears, a success banner shows the order ID and total, and the menu grid refreshes stock counts.</p>
+        </div></li>
+        <li><div>
+          <b>Stock refreshes</b>
+          <p>After a successful order, <code>getTodayStock()</code> is called again to update the remaining counts shown on each menu card. Items that just sold out become greyed out with a "Sold Out" badge.</p>
+        </div></li>
+      </ol>
+
+      <div class="fn">
+        <header><code>placeOrder()</code><span class="chip phase">phase 3</span></header>
+        <p><span class="k">File</span> <code>client/src/api/orders.ts</code></p>
+<pre><code>export async function placeOrder(
+  items: { menuItemId: number; quantity: number }[]
+): Promise&lt;OrderResponse&gt; {
+  const res = await fetch(`${API}/order`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() =&gt; null);
+    throw new Error(err?.message || "Failed to place order");
+  }
+  return res.json();
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase4">
+      <h2>Phase 4: Order history</h2>
+      <div class="phase-banner">
+        <div class="num">4</div>
+        <div><div class="title">OrdersPage for employees</div><div class="desc">A list of all past and current orders with status badges and cancel action for pending orders.</div></div>
+      </div>
+
+      <p>The <code>OrdersPage</code> component at <code>/orders</code> fetches the logged-in user's full order history via <code>GET /api/order/my</code>. Orders are displayed newest-first in a card layout.</p>
+
+      <h3>Key features</h3>
+      <div class="cols">
+        <div>
+          <h3>Status badges</h3>
+          <p>Each status gets a distinct color: <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600">Placed</span> <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600">Preparing</span> <span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600">Ready</span> <span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600">Collected</span> <span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600">Cancelled</span></p>
+        </div>
+        <div>
+          <h3>Cancel button</h3>
+          <p>Only appears on orders with status <code>Placed</code>. Calls <code>DELETE /api/order/{id}</code> and optimistically updates the local state to show <code>Cancelled</code>.</p>
+        </div>
+        <div>
+          <h3>Line item detail</h3>
+          <p>Each order card expands to show the individual items, quantities, per-item subtotals, and the order total in teal.</p>
+        </div>
+      </div>
+
+      <div class="fn">
+        <header><code>OrdersPage</code><span class="chip phase">phase 4</span></header>
+        <p><span class="k">File</span> <code>client/src/pages/OrdersPage.tsx</code></p>
+        <p>Fetches orders on mount. Cancel handler calls the API, then maps over the local state to update just the cancelled order's status without re-fetching the full list.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase5">
+      <h2>Phase 5: Kitchen kanban</h2>
+      <div class="phase-banner">
+        <div class="num">5</div>
+        <div><div class="title">KitchenPage for admins</div><div class="desc">Three-column kanban board with auto-refresh, showing all active orders grouped by status.</div></div>
+      </div>
+
+      <p>The kitchen view at <code>/admin/orders</code> is admin-only. It fetches <code>GET /api/order/active</code> (which returns all orders where status is Placed, Preparing, or Ready, including the customer name), groups them into three columns, and auto-refreshes every 15 seconds.</p>
+
+      <h3>Kanban columns</h3>
+      <div class="cols">
+        <div>
+          <h3 style="color:#1d4ed8">Placed</h3>
+          <p>New orders waiting to be started. Each card shows order ID, customer name, items list, and total. Button: <strong>Start</strong> &rarr; moves to Preparing.</p>
+        </div>
+        <div>
+          <h3 style="color:#92400e">Preparing</h3>
+          <p>Orders currently being made. Button: <strong>Mark Ready</strong> &rarr; moves to Ready (and triggers notification for the employee).</p>
+        </div>
+        <div>
+          <h3 style="color:#065f46">Ready</h3>
+          <p>Waiting for pickup. Button: <strong>Collected</strong> &rarr; removes from the board entirely.</p>
+        </div>
+      </div>
+
+      <div class="fn">
+        <header><code>KitchenPage</code><span class="chip phase">phase 5</span></header>
+        <p><span class="k">File</span> <code>client/src/pages/KitchenPage.tsx</code></p>
+        <p>The <code>NEXT_STATUS</code> map drives the button labels and transitions:</p>
+<pre><code>const NEXT_STATUS: Record&lt;string, string&gt; = {
+  Placed: "Preparing",
+  Preparing: "Ready",
+  Ready: "Collected",
+};
+
+// Auto-refresh every 15 seconds
+useEffect(() =&gt; {
+  loadOrders();
+  const interval = setInterval(loadOrders, 15000);
+  return () =&gt; clearInterval(interval);
+}, []);</code></pre>
+      </div>
+
+      <div class="note">
+        <p>When an order is marked as <strong>Collected</strong>, the API returns the updated order but the UI removes it from the list entirely using <code>prev.filter(o =&gt; o.id !== id)</code>. The active endpoint won't return it on the next refresh either.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="phase6">
+      <h2>Phase 6: Order-ready notifications</h2>
+      <div class="phase-banner">
+        <div class="num">6</div>
+        <div><div class="title">Toast notifications via polling</div><div class="desc">A global hook that polls for status changes and shows a green toast when an order moves to Ready.</div></div>
+      </div>
+
+      <p>The notification system uses a polling-first approach (SignalR planned for later). Three components work together:</p>
+
+      <h3>Architecture</h3>
+      <ol class="trace">
+        <li><div>
+          <b>New endpoint: GET /api/order/my/active</b>
+          <p>Returns the user's orders where status is Placed, Preparing, or Ready. Lighter than <code>/my</code> because it excludes completed and cancelled orders.</p>
+        </div></li>
+        <li><div>
+          <b>Polling hook: useOrderNotifications</b>
+          <p>Runs inside <code>AppShell</code> (above the router) so it polls regardless of which page the user is on. Every 10 seconds it fetches active orders and compares each order's current status with the previous poll's snapshot. When an order transitions to <code>"Ready"</code>, a toast is enqueued.</p>
+        </div></li>
+        <li><div>
+          <b>Toast component: ToastContainer</b>
+          <p>Renders a stack of green banners in the top-right corner. Each toast slides in, auto-dismisses after 8 seconds, and can be manually closed.</p>
+        </div></li>
+      </ol>
+
+      <h3>The polling hook</h3>
+      <div class="fn">
+        <header><code>useOrderNotifications</code><span class="chip phase">phase 6</span></header>
+        <p><span class="k">File</span> <code>client/src/hooks/useOrderNotifications.ts</code></p>
+        <p>The hook stores a <code>Map&lt;orderId, status&gt;</code> in a <code>useRef</code> to survive across renders without triggering them. On each poll, it builds a fresh map and compares old vs. new status per order.</p>
+<pre><code>const POLL_INTERVAL = 10_000;
+
+export default function useOrderNotifications(loggedIn: boolean) {
+  const [toasts, setToasts] = useState&lt;ToastMessage[]&gt;([]);
+  const prevStatuses = useRef&lt;Map&lt;number, string&gt;&gt;(new Map());
+
+  useEffect(() =&gt; {
+    if (!loggedIn) { prevStatuses.current.clear(); return; }
+
+    async function check() {
+      const orders = await getMyActiveOrders();
+      const prev = prevStatuses.current;
+      const next = new Map&lt;number, string&gt;();
+
+      for (const order of orders) {
+        const oldStatus = prev.get(order.id);
+        next.set(order.id, order.status);
+
+        if (oldStatus &amp;&amp; oldStatus !== order.status &amp;&amp; order.status === "Ready") {
+          const itemNames = order.items.map(i =&gt; i.name).join(", ");
+          setToasts(t =&gt; [...t, {
+            id: `ready-${order.id}-${Date.now()}`,
+            text: `Order #${order.id} is ready for pickup! (${itemNames})`,
+          }]);
+        }
+      }
+      prevStatuses.current = next;
+    }
+
+    check();
+    const polling = setInterval(check, POLL_INTERVAL);
+    return () =&gt; clearInterval(polling);
+  }, [loggedIn]);
+
+  return { toasts, dismiss };
+}</code></pre>
+      </div>
+
+      <h3>The Toast component</h3>
+      <div class="fn">
+        <header><code>ToastContainer</code> + <code>ToastItem</code><span class="chip phase">phase 6</span></header>
+        <p><span class="k">File</span> <code>client/src/components/Toast.tsx</code></p>
+        <p>Each toast renders as a dark green banner with a slide-in animation (opacity + translateY). Auto-dismiss after 8 seconds via <code>setTimeout</code>. A close button allows manual dismiss. The container is fixed to the viewport top-right at <code>z-index: 9999</code>.</p>
+<pre><code>// ToastItem animation
+useEffect(() =&gt; {
+  requestAnimationFrame(() =&gt; setVisible(true));
+  const timer = setTimeout(() =&gt; onDismiss(message.id), 8000);
+  return () =&gt; clearTimeout(timer);
+}, [message.id, onDismiss]);</code></pre>
+      </div>
+
+      <h3>AppShell integration</h3>
+      <div class="fn">
+        <header><code>AppShell</code><span class="chip phase">phase 6</span></header>
+        <p><span class="k">File</span> <code>client/src/App.tsx</code></p>
+        <p>The <code>AppShell</code> wrapper sits inside <code>AuthProvider</code> but outside <code>BrowserRouter</code>. This lets it access the auth context to know whether to poll, while rendering the toast overlay above all routes.</p>
+<pre><code>function AppShell() {
+  const { user } = useAuth();
+  const { toasts, dismiss } = useOrderNotifications(!!user);
+
+  return (
+    &lt;&gt;
+      &lt;ToastContainer messages={toasts} onDismiss={dismiss} /&gt;
+      &lt;BrowserRouter&gt;
+        &lt;Routes&gt;{/* ... all routes ... */}&lt;/Routes&gt;
+      &lt;/BrowserRouter&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+      </div>
+
+      <div class="note">
+        <p><strong>Why polling, not WebSockets?</strong> Polling is simpler to deploy (no sticky sessions, no SignalR hub). At canteen scale (&lt; 100 concurrent users), a 10-second GET request per user is negligible server load. SignalR can be added later for instant push when the user base grows.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="files">
+      <h2>Files changed</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>File</th><th>Change</th><th>Phase</th></tr></thead>
+        <tbody>
+          <tr><td><code>server/Models/Order.cs</code></td><td>New &mdash; Order and OrderItem entities</td><td><span class="chip phase">1</span></td></tr>
+          <tr><td><code>server/Models/OrderDto.cs</code></td><td>New &mdash; PlaceOrderRequest, OrderResponse, etc.</td><td><span class="chip phase">1</span></td></tr>
+          <tr><td><code>server/Data/CanteenDbContext.cs</code></td><td>Modified &mdash; added Orders and OrderItems DbSets</td><td><span class="chip phase">1</span></td></tr>
+          <tr><td><code>server/Controllers/OrderController.cs</code></td><td>New &mdash; all order endpoints</td><td><span class="chip phase">2</span></td></tr>
+          <tr><td><code>client/src/api/orders.ts</code></td><td>New &mdash; all order API functions + CartItem interface</td><td><span class="chip phase">3</span></td></tr>
+          <tr><td><code>client/src/pages/TodayMenuPage.tsx</code></td><td>Modified &mdash; added cart state and checkout flow</td><td><span class="chip phase">3</span></td></tr>
+          <tr><td><code>client/src/pages/OrdersPage.tsx</code></td><td>New &mdash; employee order history with cancel</td><td><span class="chip phase">4</span></td></tr>
+          <tr><td><code>client/src/pages/KitchenPage.tsx</code></td><td>New &mdash; admin kanban board</td><td><span class="chip phase">5</span></td></tr>
+          <tr><td><code>client/src/hooks/useOrderNotifications.ts</code></td><td>New &mdash; polling hook for status changes</td><td><span class="chip phase">6</span></td></tr>
+          <tr><td><code>client/src/components/Toast.tsx</code></td><td>New &mdash; toast notification UI</td><td><span class="chip phase">6</span></td></tr>
+          <tr><td><code>client/src/App.tsx</code></td><td>Modified &mdash; added AppShell wrapper with notifications</td><td><span class="chip phase">6</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="next">
+      <h2>What comes next</h2>
+      <div class="cols">
+        <div>
+          <h3>SignalR push <span class="chip">planned</span></h3>
+          <p>Replace the 10-second poll with a WebSocket connection via ASP.NET SignalR. The <code>useOrderNotifications</code> hook would subscribe to a hub instead of polling.</p>
+        </div>
+        <div>
+          <h3>Order analytics <span class="chip">planned</span></h3>
+          <p>Dashboard for admins showing popular items, daily order volumes, average preparation times, and revenue totals.</p>
+        </div>
+        <div>
+          <h3>Payment integration <span class="chip">planned</span></h3>
+          <p>UPI/wallet payment flow. The current system assumes post-paid (pay at counter), but pre-payment would lock in the order.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>Canteen Connect &mdash; Ordering Flow documentation. Part of the <a href="login-flow.html">login</a> &rarr; <a href="menu-management.html">menu</a> &rarr; <strong>ordering</strong> doc series.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>
