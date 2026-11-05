@@ -55,6 +55,12 @@ export async function placeOrder(
   return res.json();
 }
 
+export async function getMyActiveOrders(): Promise<OrderResponse[]> {
+  const res = await fetch(`${API}/order/my/active`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to load active orders");
+  return res.json();
+}
+
 export async function getMyOrders(): Promise<OrderResponse[]> {
   const res = await fetch(`${API}/order/my`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to load orders");

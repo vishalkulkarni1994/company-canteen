@@ -82,6 +82,21 @@ public class OrderController(CanteenDbContext db) : ControllerBase
         return Ok(orders.Select(ToResponse));
     }
 
+    [HttpGet("my/active")]
+    public async Task<IActionResult> MyActiveOrders()
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        var orders = await db.Orders
+            .Include(o => o.Items).ThenInclude(oi => oi.MenuItem)
+            .Where(o => o.UserId == userId
+                        && (o.Status == "Placed" || o.Status == "Preparing" || o.Status == "Ready"))
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+
+        return Ok(orders.Select(ToResponse));
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetOrder(int id)
     {

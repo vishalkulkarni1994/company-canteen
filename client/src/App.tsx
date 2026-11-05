@@ -6,6 +6,8 @@ import MenuPage from "./pages/MenuPage";
 import StockPage from "./pages/StockPage";
 import OrdersPage from "./pages/OrdersPage";
 import KitchenPage from "./pages/KitchenPage";
+import ToastContainer from "./components/Toast";
+import useOrderNotifications from "./hooks/useOrderNotifications";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -24,9 +26,13 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function App() {
+function AppShell() {
+  const { user } = useAuth();
+  const { toasts, dismiss } = useOrderNotifications(!!user);
+
   return (
-    <AuthProvider>
+    <>
+      <ToastContainer messages={toasts} onDismiss={dismiss} />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
@@ -37,6 +43,14 @@ export default function App() {
           <Route path="/admin/orders" element={<AdminRoute><KitchenPage /></AdminRoute>} />
         </Routes>
       </BrowserRouter>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
     </AuthProvider>
   );
 }
