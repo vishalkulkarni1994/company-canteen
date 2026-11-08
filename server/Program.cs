@@ -13,6 +13,20 @@ builder.Services.AddDbContext<CanteenDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddSingleton<AuthService>();
+builder.Services.AddHttpClient();
+
+// ── Claude AI client registration ──
+// Switch between raw HTTP and Anthropic SDK via appsettings.json:
+//   "Claude": { "UseSdk": false }  ← raw HttpClient (default)
+//   "Claude": { "UseSdk": true  }  ← Anthropic SDK (needs NuGet package)
+var useSdk = builder.Configuration.GetValue<bool>("Claude:UseSdk");
+if (useSdk)
+    builder.Services.AddSingleton<IClaudeMessageClient, SdkClaudeClient>();
+else
+    builder.Services.AddSingleton<IClaudeMessageClient, HttpClaudeClient>();
+
+builder.Services.AddSingleton<ClaudeApiService>();
+builder.Services.AddScoped<ChatService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
