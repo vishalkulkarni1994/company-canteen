@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canteen Connect — AI Chat Ordering Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --code-bg: #eaf0ee;
+    --phase: #6d28d9;
+    --phase-soft: #f0ebff;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514;
+      --surface: #151f1d;
+      --ink: #e5eeec;
+      --muted: #94a8a2;
+      --line: #25352f;
+      --accent: #5eead4;
+      --accent-soft: #123430;
+      --warn: #fbbf24;
+      --warn-soft: #302509;
+      --code-bg: #101a18;
+      --phase: #a78bfa;
+      --phase-soft: #1e1538;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514;
+    --surface: #151f1d;
+    --ink: #e5eeec;
+    --muted: #94a8a2;
+    --line: #25352f;
+    --accent: #5eead4;
+    --accent-soft: #123430;
+    --warn: #fbbf24;
+    --warn-soft: #302509;
+    --code-bg: #101a18;
+    --phase: #a78bfa;
+    --phase-soft: #1e1538;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--font-body);
+    padding-inline: 16px;
+    padding-block: 24px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    nav.toc { position: static; }
+    nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+  nav.toc { position: sticky; top: 16px; align-self: start; padding-top: 8px; font-size: 14px; }
+  nav.toc p { margin: 0 0 8px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+
+  main { min-width: 0; }
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font: 600 18px/1.3 var(--font-display); margin: 28px 0 8px; }
+  h4 { font: 600 15px/1.3 var(--font-display); margin: 20px 0 6px; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  section { padding-block: 40px 8px; border-top: 1px solid var(--line); margin-top: 32px; scroll-margin-top: 16px; }
+  header.top + section { margin-top: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; max-width: 72ch; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+
+  code { font: 500 .88em var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; font: 400 13.5px/1.55 var(--font-mono); }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .scroll { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.phase { background: var(--phase-soft); color: var(--phase); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 18px; max-width: 72ch; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .cols > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .cols h3 { margin-top: 0; }
+  .cols p:last-child, .cols ul:last-child { margin-bottom: 0; }
+
+  .fn { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px 6px; margin: 0 0 16px; }
+  .fn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+  .fn > header code { font-size: 15px; background: none; padding: 0; color: var(--accent); }
+  .fn p { max-width: none; }
+  .fn .k { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+  .fn pre { margin-top: 4px; }
+
+  ol.trace { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; margin: 0 0 18px; max-width: none; }
+  ol.trace li { counter-increment: s; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  ol.trace li::before { content: counter(s); font: 600 14px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  ol.trace li > div > :last-child { margin-bottom: 0; }
+  ol.trace b { display: block; margin-bottom: 2px; }
+
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 0 0 20px; }
+  .diagram svg { display: block; min-width: 720px; width: 100%; height: auto; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#message-flow">End-to-end flow</a></li>
+      <li><a href="#agentic-loop">Agentic loop</a></li>
+      <li><a href="#dispatch">Tool dispatch</a></li>
+      <li><a href="#tools">Tool definitions</a></li>
+      <li><a href="#get-menu">get_today_menu</a></li>
+      <li><a href="#place-order">place_order</a></li>
+      <li><a href="#angular-ui">Angular chat UI</a></li>
+      <li><a href="#files">Files</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">company-canteen &middot; AI chat ordering</p>
+      <h1>AI chat ordering flow</h1>
+      <p class="lede">A conversational ordering interface powered by Claude. Users chat with an AI assistant that browses the menu, confirms selections, and places orders &mdash; all through natural language. Built with an agentic tool-use loop inspired by the V3 TradeCapture pipeline separation pattern.</p>
+    </header>
+
+    <!-- ================================================================ -->
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>The AI chat ordering feature adds a floating chat window to the Angular frontend. When a logged-in user sends a message, the backend orchestrates a conversation with Claude (Haiku 5.5, the cheapest model at $0.10/$0.50 per MTok) using the Messages API with tool use. Claude can call two tools &mdash; <code>get_today_menu</code> and <code>place_order</code> &mdash; to interact with the canteen database on the user's behalf.</p>
+
+      <div class="cols">
+        <div>
+          <h3>ClaudeApiService <span class="chip plain">generic</span></h3>
+          <p>A reusable, business-agnostic wrapper around the Claude Messages API. Handles the agentic loop, HTTP calls, token tracking, and tool-result plumbing. Knows nothing about canteen logic.</p>
+        </div>
+        <div>
+          <h3>ChatService <span class="chip plain">business</span></h3>
+          <p>The canteen-specific orchestrator. Defines the agent (model, system prompt, tools), captures the user's identity via a lambda closure, and routes tool calls to database operations.</p>
+        </div>
+        <div>
+          <h3>ChatComponent <span class="chip plain">Angular</span></h3>
+          <p>A floating chat window with a FAB button. Sends messages to <code>POST /api/chat</code> with conversation history, renders assistant responses in chat bubbles with a typing indicator.</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><strong>V3 separation pattern.</strong> This architecture mirrors the V3 TradeCapture pipeline: <code>ClaudeApiService</code> is the generic engine (like V3's <code>ClaudeService</code>), while <code>ChatService</code> is the business orchestrator (like V3's <code>TradeProcessingService</code>). The generic service never imports domain models; the business service never touches HTTP headers or the Claude wire protocol.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <p>The system has four layers. Each layer only talks to the one directly below it.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 820 520" role="img" aria-label="AI chat architecture diagram showing Angular UI, ChatController, ChatService, and ClaudeApiService layers">
+          <defs>
+            <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--accent)"/></marker>
+            <marker id="arrow-muted" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--muted)"/></marker>
+          </defs>
+
+          <!-- Angular UI -->
+          <rect x="240" y="20" width="340" height="60" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+          <text x="410" y="46" text-anchor="middle" font-family="var(--font-display)" font-size="16" font-weight="700" fill="var(--ink)">Angular Chat UI</text>
+          <text x="410" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">ChatComponent + ChatService (Angular)</text>
+
+          <!-- Arrow down -->
+          <path d="M410 80 V110" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+          <text x="420" y="100" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">POST /api/chat</text>
+
+          <!-- ChatController -->
+          <rect x="280" y="112" width="260" height="50" rx="8" fill="var(--surface)" stroke="var(--line)" stroke-width="1.4"/>
+          <text x="410" y="140" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--ink)">ChatController</text>
+          <text x="410" y="155" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">extracts userId from JWT</text>
+
+          <!-- Arrow down -->
+          <path d="M410 162 V192" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+          <text x="420" y="182" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">SendMessage(msg, userId, history)</text>
+
+          <!-- ChatService -->
+          <rect x="220" y="194" width="380" height="70" rx="10" fill="#f0ebff" stroke="var(--phase)" stroke-width="1.6"/>
+          <text x="410" y="222" text-anchor="middle" font-family="var(--font-display)" font-size="16" font-weight="700" fill="var(--ink)">ChatService</text>
+          <text x="410" y="240" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">AgentDef + DispatchTool + lambda closure</text>
+          <text x="410" y="256" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--phase)">business logic layer</text>
+
+          <!-- Arrow down -->
+          <path d="M410 264 V294" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+          <text x="420" y="284" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">SendAsync(query, agentDef, dispatchTool)</text>
+
+          <!-- ClaudeApiService -->
+          <rect x="200" y="296" width="420" height="70" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6"/>
+          <text x="410" y="324" text-anchor="middle" font-family="var(--font-display)" font-size="16" font-weight="700" fill="var(--ink)">ClaudeApiService</text>
+          <text x="410" y="342" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--muted)">agentic loop + HTTP + token tracking</text>
+          <text x="410" y="358" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent)">generic API layer</text>
+
+          <!-- Arrow down to Claude API -->
+          <path d="M340 366 V420" stroke="var(--accent)" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+          <text x="280" y="398" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">POST /v1/messages</text>
+
+          <!-- Arrow down to DB (from ChatService via dispatchTool callback) -->
+          <path d="M480 366 V420" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="5 4" fill="none" marker-end="url(#arrow-muted)"/>
+          <text x="510" y="398" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">dispatchTool callback</text>
+
+          <!-- Claude API box -->
+          <rect x="260" y="422" width="160" height="50" rx="8" fill="var(--surface)" stroke="var(--line)" stroke-width="1.4"/>
+          <text x="340" y="452" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="var(--ink)">Claude API</text>
+          <text x="340" y="466" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">Haiku 5.5</text>
+
+          <!-- SQLite box -->
+          <rect x="440" y="422" width="160" height="50" rx="8" fill="var(--surface)" stroke="var(--line)" stroke-width="1.4"/>
+          <text x="520" y="452" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="var(--ink)">SQLite</text>
+          <text x="520" y="466" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">EF Core</text>
+        </svg>
+      </div>
+
+      <h3>DI registration</h3>
+      <div class="fn">
+        <header><code>Program.cs</code><span class="chip plain">startup</span></header>
+        <p><code>ClaudeApiService</code> is a <strong>singleton</strong> (stateless, reusable). <code>ChatService</code> is <strong>scoped</strong> (one per HTTP request, so it can safely capture userId). <code>ChatService</code> uses <code>IServiceScopeFactory</code> to create fresh DI scopes for each tool call, ensuring EF Core's <code>DbContext</code> is properly scoped.</p>
+<pre><code>builder.Services.AddHttpClient();
+builder.Services.AddSingleton&lt;ClaudeApiService&gt;();
+builder.Services.AddScoped&lt;ChatService&gt;();</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="message-flow">
+      <h2>End-to-end message flow</h2>
+      <p>When a user types "what's on the menu today?" in the chat window, this is the complete journey from keystroke to response.</p>
+
+      <ol class="trace">
+        <li><div>
+          <b>Angular ChatComponent sends message</b>
+          <p>The component calls <code>ChatService.sendMessage(message, history)</code>, which POSTs to <code>http://localhost:5230/api/chat</code> with the JWT token in the <code>Authorization</code> header. The request body contains the user's message and the conversation history array.</p>
+        </div></li>
+        <li><div>
+          <b>ChatController extracts userId from JWT</b>
+          <p>The <code>[Authorize]</code> attribute ensures only authenticated users reach the endpoint. The controller reads the <code>NameIdentifier</code> claim from the JWT to get the numeric <code>userId</code>, then calls <code>chatService.SendMessage(req.Message, userId, req.History)</code>.</p>
+        </div></li>
+        <li><div>
+          <b>ChatService builds the agent and lambda closure</b>
+          <p>The static <code>AgentDef</code> holds the model (<code>claude-haiku-5-5</code>), system prompt, max tokens, and tool definitions. A <strong>lambda closure</strong> captures <code>userId</code> into the dispatch delegate: <code>(toolName, input) =&gt; DispatchTool(toolName, input, userId)</code>. This is passed to the generic <code>ClaudeApiService</code>.</p>
+        </div></li>
+        <li><div>
+          <b>ClaudeApiService runs the agentic loop</b>
+          <p>Builds the messages array (history + new user message), then enters a loop of up to <code>MaxToolRounds = 10</code> iterations. Each iteration calls the Claude Messages API, checks the <code>stop_reason</code>, and either returns text or processes tool calls. See <a href="#agentic-loop">Agentic loop</a> for the full pseudocode.</p>
+        </div></li>
+        <li><div>
+          <b>Claude decides to call <code>get_today_menu</code></b>
+          <p>The API responds with <code>stop_reason: "tool_use"</code> and a content block of type <code>tool_use</code>. The agentic loop extracts the tool name, ID, and input, then calls the <code>dispatchTool</code> delegate.</p>
+        </div></li>
+        <li><div>
+          <b>DispatchTool routes to business logic</b>
+          <p>The delegate flows back into <code>ChatService.DispatchTool</code> (with the captured <code>userId</code>). A C# switch expression routes <code>"get_today_menu"</code> to the <code>GetTodayMenu</code> method, which queries the database via EF Core. The result (JSON array of menu items) is returned as a string.</p>
+        </div></li>
+        <li><div>
+          <b>Tool result sent back to Claude</b>
+          <p>The agentic loop wraps the string result in a <code>tool_result</code> content block (matched by <code>tool_use_id</code>) and appends it as a <code>"user"</code> message. The loop continues with another API call.</p>
+        </div></li>
+        <li><div>
+          <b>Claude generates the final response</b>
+          <p>With the menu data in context, Claude formats a friendly response with item names, prices, categories, and remaining stock. This time <code>stop_reason</code> is <code>"end_turn"</code>, so the loop extracts the text content and returns it.</p>
+        </div></li>
+        <li><div>
+          <b>Response flows back to the UI</b>
+          <p>The string bubbles up through <code>ChatService</code> &rarr; <code>ChatController</code> (wrapped in <code>ChatResponse</code>) &rarr; Angular <code>ChatService</code> &rarr; <code>ChatComponent</code>, which renders it as an assistant message bubble.</p>
+        </div></li>
+      </ol>
+
+      <div class="diagram">
+        <svg viewBox="0 0 820 280" role="img" aria-label="Sequence diagram showing message flow from Angular to Claude API and back">
+          <defs>
+            <marker id="seq-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--accent)"/></marker>
+            <marker id="seq-arrow-back" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto"><path d="M8,0 L0,4 L8,8 z" fill="var(--muted)"/></marker>
+          </defs>
+
+          <!-- Lifelines -->
+          <text x="80" y="18" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="600" fill="var(--ink)">Angular</text>
+          <line x1="80" y1="24" x2="80" y2="270" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 3"/>
+
+          <text x="250" y="18" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="600" fill="var(--ink)">ChatController</text>
+          <line x1="250" y1="24" x2="250" y2="270" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 3"/>
+
+          <text x="420" y="18" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="600" fill="var(--ink)">ChatService</text>
+          <line x1="420" y1="24" x2="420" y2="270" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 3"/>
+
+          <text x="590" y="18" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="600" fill="var(--ink)">ClaudeApiService</text>
+          <line x1="590" y1="24" x2="590" y2="270" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 3"/>
+
+          <text x="750" y="18" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="600" fill="var(--ink)">Claude API</text>
+          <line x1="750" y1="24" x2="750" y2="270" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 3"/>
+
+          <!-- 1: Angular -> Controller -->
+          <path d="M80 45 H248" stroke="var(--accent)" stroke-width="1.4" fill="none" marker-end="url(#seq-arrow)"/>
+          <text x="164" y="40" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--accent)">POST /api/chat</text>
+
+          <!-- 2: Controller -> ChatService -->
+          <path d="M250 65 H418" stroke="var(--accent)" stroke-width="1.4" fill="none" marker-end="url(#seq-arrow)"/>
+          <text x="334" y="60" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--accent)">SendMessage(msg, userId)</text>
+
+          <!-- 3: ChatService -> ClaudeApiService -->
+          <path d="M420 85 H588" stroke="var(--accent)" stroke-width="1.4" fill="none" marker-end="url(#seq-arrow)"/>
+          <text x="504" y="80" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--accent)">SendAsync(query, agentDef, dispatch)</text>
+
+          <!-- 4: ClaudeApiService -> Claude API (round 1) -->
+          <path d="M590 105 H748" stroke="var(--accent)" stroke-width="1.4" fill="none" marker-end="url(#seq-arrow)"/>
+          <text x="669" y="100" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--accent)">messages (round 1)</text>
+
+          <!-- 5: Claude API -> ClaudeApiService (tool_use) -->
+          <path d="M750 125 H592" stroke="var(--muted)" stroke-width="1.4" fill="none" stroke-dasharray="5 3" marker-end="url(#seq-arrow-back)"/>
+          <text x="669" y="120" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--muted)">stop_reason: tool_use</text>
+
+          <!-- 6: ClaudeApiService -> ChatService (dispatchTool callback) -->
+          <path d="M590 145 H422" stroke="var(--phase)" stroke-width="1.4" fill="none" marker-end="url(#seq-arrow-back)"/>
+          <text x="504" y="140" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--phase)">dispatchTool("get_today_menu")</text>
+
+          <!-- 7: ChatService -> ClaudeApiService (tool result) -->
+          <path d="M420 165 H588" stroke="var(--phase)" stroke-width="1.4" fill="none" marker-end="url(#seq-arrow)"/>
+          <text x="504" y="160" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--phase)">JSON menu data</text>
+
+          <!-- 8: ClaudeApiService -> Claude API (round 2 with tool_result) -->
+          <path d="M590 185 H748" stroke="var(--accent)" stroke-width="1.4" fill="none" marker-end="url(#seq-arrow)"/>
+          <text x="669" y="180" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--accent)">messages + tool_result (round 2)</text>
+
+          <!-- 9: Claude API -> ClaudeApiService (end_turn) -->
+          <path d="M750 205 H592" stroke="var(--muted)" stroke-width="1.4" fill="none" stroke-dasharray="5 3" marker-end="url(#seq-arrow-back)"/>
+          <text x="669" y="200" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--muted)">stop_reason: end_turn</text>
+
+          <!-- 10: ClaudeApiService -> ChatService (text) -->
+          <path d="M590 225 H422" stroke="var(--muted)" stroke-width="1.4" fill="none" stroke-dasharray="5 3" marker-end="url(#seq-arrow-back)"/>
+          <text x="504" y="220" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--muted)">final text response</text>
+
+          <!-- 11: ChatService -> Controller -->
+          <path d="M420 245 H252" stroke="var(--muted)" stroke-width="1.4" fill="none" stroke-dasharray="5 3" marker-end="url(#seq-arrow-back)"/>
+          <text x="334" y="240" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--muted)">reply string</text>
+
+          <!-- 12: Controller -> Angular -->
+          <path d="M250 265 H82" stroke="var(--muted)" stroke-width="1.4" fill="none" stroke-dasharray="5 3" marker-end="url(#seq-arrow-back)"/>
+          <text x="164" y="260" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--muted)">{ reply: "Here's today's menu..." }</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="agentic-loop">
+      <h2>Agentic loop</h2>
+      <p>The core of <code>ClaudeApiService.SendAsync</code> is an agentic loop that lets Claude call tools and receive results across multiple rounds. This is the same pattern used in Claude's official tool-use documentation.</p>
+
+      <h3>Pseudocode</h3>
+      <div class="fn">
+        <header><code>SendAsync</code><span class="chip">ClaudeApiService</span></header>
+        <p>The loop has three phases: <strong>setup</strong>, <strong>loop</strong>, and <strong>post-loop</strong>.</p>
+<pre><code>function SendAsync(query, agentDef, dispatchTool, history):
+    // ── SETUP ──
+    validate API key and query
+    messages = []
+    append history messages (if any)
+    append { role: "user", content: query }
+    start stopwatch, init token counters
+
+    // ── LOOP (max 10 rounds) ──
+    for round = 0 to MaxToolRounds:
+        response = POST /v1/messages with {
+            model, max_tokens, system, tools, messages
+        }
+        accumulate input_tokens and output_tokens
+
+        if stop_reason != "tool_use":
+            // Claude is done — extract text blocks and break
+            result = join all text blocks from response.content
+            break
+
+        // Claude wants to call tools
+        append assistant message with raw content blocks
+        toolResults = []
+
+        for each tool_use block in response.content:
+            extract name, id, input
+            result = await dispatchTool(name, input)  // callback
+            append { type: "tool_result", tool_use_id: id, content: result }
+
+        append user message with toolResults array
+        // loop continues — next round sends everything back to Claude
+
+    // ── POST-LOOP ──
+    log model, total tokens, elapsed time
+    return extracted text</code></pre>
+      </div>
+
+      <h3>Key design decisions</h3>
+      <div class="cols">
+        <div>
+          <h3>MaxToolRounds = 10</h3>
+          <p>Safety cap to prevent infinite loops. In practice, a menu browse + order placement takes 2&ndash;3 rounds. The cap is a guardrail, not a limit the user should hit.</p>
+        </div>
+        <div>
+          <h3>Func&lt;&gt; delegate</h3>
+          <p>The dispatch function is passed as <code>Func&lt;string, JsonElement, Task&lt;string&gt;&gt;</code> &mdash; a generic contract. The loop calls it without knowing what tools exist or what they do. This is what makes <code>ClaudeApiService</code> reusable.</p>
+        </div>
+        <div>
+          <h3>Message accumulation</h3>
+          <p>The <code>messages</code> list grows with each round: user &rarr; assistant (tool_use) &rarr; user (tool_result) &rarr; assistant (tool_use or text). Claude sees the full conversation on every API call, maintaining context across tool rounds.</p>
+        </div>
+      </div>
+
+      <h3>Raw HTTP vs Anthropic SDK</h3>
+      <p>This project uses raw <code>HttpClient</code> calls. The official Anthropic .NET SDK (<code>dotnet add package Anthropic</code>) is an alternative. The agentic loop logic is identical in both &mdash; only the HTTP/serialization layer differs.</p>
+
+      <div class="cols">
+        <div>
+          <h3>Raw HTTP <span class="chip">current</span></h3>
+          <ul>
+            <li>Zero extra NuGet dependency</li>
+            <li>Full control over JSON serialization</li>
+            <li>Easier to debug (see exact wire JSON)</li>
+            <li>Must handle headers, errors, deserialization manually</li>
+          </ul>
+<pre><code>// Raw HTTP approach:
+var resp = await client.PostAsync(
+    "https://api.anthropic.com/v1/messages",
+    content, ct);
+var json = JsonDocument.Parse(
+    await resp.Content.ReadAsStringAsync(ct));
+// manually parse stop_reason, content blocks...</code></pre>
+        </div>
+        <div>
+          <h3>SDK <span class="chip plain">alternative</span></h3>
+          <ul>
+            <li>One line replaces <code>CallApiAsync()</code></li>
+            <li>Typed objects (<code>ToolUseContentBlock</code>, etc.)</li>
+            <li>Automatic header management</li>
+            <li>Adds a NuGet dependency</li>
+          </ul>
+<pre><code>// SDK approach:
+var client = new AnthropicClient(apiKey);
+var response = await client.Messages
+    .CreateAsync(parameters, ct);
+// response.StopReason, response.Content
+// are typed — no manual JSON parsing</code></pre>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><strong>Switching later.</strong> To migrate to the SDK: <code>dotnet add package Anthropic</code>, replace <code>CallApiAsync()</code> with <code>client.Messages.CreateAsync()</code>, and swap <code>JsonElement</code> content blocks for typed <code>ContentBlock</code> objects. The rest of the code (loop, dispatchTool, token tracking) stays identical. See the inline comments in <code>ClaudeApiService.cs</code> for side-by-side comparisons.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="dispatch">
+      <h2>Tool dispatch</h2>
+      <p>The dispatch system bridges the generic agentic loop to canteen-specific business logic. It has two parts: a <strong>lambda closure</strong> that captures context, and a <strong>switch expression</strong> that routes tool calls.</p>
+
+      <h3>The lambda bridge</h3>
+      <div class="fn">
+        <header><code>ChatService.SendMessage</code><span class="chip phase">bridge</span></header>
+        <p>The <code>ClaudeApiService.SendAsync</code> method accepts <code>Func&lt;string, JsonElement, Task&lt;string&gt;&gt;</code> &mdash; a function that takes a tool name and input, and returns a result string. But <code>DispatchTool</code> also needs <code>userId</code> to place orders. The lambda closure captures it:</p>
+<pre><code>return await claudeApi.SendAsync(
+    userMessage,
+    AgentDef,
+    dispatchTool: (toolName, input) =&gt; DispatchTool(toolName, input, userId),
+    history,
+    CancellationToken.None);</code></pre>
+        <p>The generic service sees a two-parameter function. The business service quietly passes three. Neither side knows about the other's concerns.</p>
+      </div>
+
+      <h3>The switch expression router</h3>
+      <div class="fn">
+        <header><code>ChatService.DispatchTool</code><span class="chip phase">router</span></header>
+        <p>Inside <code>DispatchTool</code>, a C# switch expression maps tool names to handler methods. Each call creates a fresh DI scope via <code>IServiceScopeFactory</code> to get a properly scoped <code>DbContext</code>.</p>
+<pre><code>private async Task&lt;string&gt; DispatchTool(string toolName, JsonElement input, int userId)
+{
+    using var scope = scopeFactory.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService&lt;CanteenDbContext&gt;();
+
+    return toolName switch
+    {
+        "get_today_menu" =&gt; await GetTodayMenu(db),
+        "place_order"    =&gt; await PlaceOrder(db, input, userId),
+        var unknown      =&gt; throw new NotSupportedException($"Unknown tool '{unknown}'.")
+    };
+}</code></pre>
+      </div>
+
+      <div class="note">
+        <p><strong>Why IServiceScopeFactory?</strong> The agentic loop can call tools multiple times within a single HTTP request. EF Core's <code>DbContext</code> is scoped (one per request), but each tool call may need its own unit of work. Creating a fresh scope per tool call avoids stale tracking state and ensures each <code>SaveChangesAsync</code> is isolated.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="tools">
+      <h2>Tool definitions</h2>
+      <p>Tools are defined as anonymous objects in <code>ChatService.BuildToolDefinitions()</code> and passed to Claude in every API request. Claude uses the <code>name</code>, <code>description</code>, and <code>input_schema</code> to decide when and how to call each tool.</p>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Tool</th><th>Description (sent to Claude)</th><th>Input</th><th>When Claude calls it</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>get_today_menu</code></td>
+            <td>Get today's available menu items with prices, categories, and remaining stock</td>
+            <td>None (empty object)</td>
+            <td>User asks what's available, wants to see the menu, or before placing an order</td>
+          </tr>
+          <tr>
+            <td><code>place_order</code></td>
+            <td>Place an order for the user. Each item needs a menuItemId and quantity</td>
+            <td><code>{ items: [{ menuItemId: int, quantity: int }] }</code></td>
+            <td>After confirming order details with the user</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h3>Tool definition code</h3>
+      <div class="fn">
+        <header><code>BuildToolDefinitions()</code><span class="chip">ChatService</span></header>
+        <p>Tool schemas use the JSON Schema format required by Claude's Messages API. The <code>input_schema</code> tells Claude the exact shape of the arguments it should construct.</p>
+<pre><code>private static object[] BuildToolDefinitions()
+{
+    return
+    [
+        new
+        {
+            name = "get_today_menu",
+            description = "Get today's available menu items with prices, " +
+                          "categories, and remaining stock.",
+            input_schema = new
+            {
+                type = "object",
+                properties = new { },
+                required = Array.Empty&lt;string&gt;()
+            }
+        },
+        new
+        {
+            name = "place_order",
+            description = "Place an order for the user. Each item needs " +
+                          "a menuItemId and quantity.",
+            input_schema = new
+            {
+                type = "object",
+                properties = new
+                {
+                    items = new
+                    {
+                        type = "array",
+                        items = new
+                        {
+                            type = "object",
+                            properties = new
+                            {
+                                menuItemId = new { type = "integer" },
+                                quantity = new { type = "integer" }
+                            },
+                            required = new[] { "menuItemId", "quantity" }
+                        }
+                    }
+                },
+                required = new[] { "items" }
+            }
+        }
+    ];
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="get-menu">
+      <h2>get_today_menu</h2>
+      <p>Fetches today's available menu items from the database. Returns a JSON array with item details and remaining stock, or a friendly message if nothing is available.</p>
+
+      <div class="fn">
+        <header><code>GetTodayMenu()</code><span class="chip">ChatService</span></header>
+        <p><span class="k">Query</span> Joins <code>DailyStocks</code> with <code>MenuItems</code>, filters by today's date and active items, calculates remaining servings.</p>
+<pre><code>private static async Task&lt;string&gt; GetTodayMenu(CanteenDbContext db)
+{
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var items = await db.DailyStocks
+        .Include(s =&gt; s.MenuItem)
+        .Where(s =&gt; s.Date == today &amp;&amp; s.MenuItem.IsActive)
+        .OrderBy(s =&gt; s.MenuItem.Category)
+        .ThenBy(s =&gt; s.MenuItem.Name)
+        .Select(s =&gt; new
+        {
+            s.MenuItemId,
+            s.MenuItem.Name,
+            s.MenuItem.Description,
+            Price = s.MenuItem.Price,
+            s.MenuItem.Category,
+            Remaining = s.QuantityAvailable - s.QuantityOrdered
+        })
+        .ToListAsync();
+
+    if (items.Count == 0)
+        return "No items are available today.";
+
+    return JsonSerializer.Serialize(items, JsonOpts);
+}</code></pre>
+      </div>
+
+      <h4>Example return value</h4>
+<pre><code>[
+  { "menu_item_id": 1, "name": "Masala Dosa", "description": "Crispy crepe with potato filling",
+    "price": 60, "category": "Breakfast", "remaining": 15 },
+  { "menu_item_id": 3, "name": "Filter Coffee", "description": "South Indian filter coffee",
+    "price": 25, "category": "Beverages", "remaining": 40 }
+]</code></pre>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="place-order">
+      <h2>place_order</h2>
+      <p>Creates an order in the database for the authenticated user. Validates stock availability, decrements quantities, and returns a confirmation string.</p>
+
+      <div class="fn">
+        <header><code>PlaceOrder()</code><span class="chip">ChatService</span></header>
+        <p><span class="k">Steps</span> Parse items array &rarr; validate each against today's stock &rarr; decrement <code>QuantityOrdered</code> &rarr; create <code>Order</code> + <code>OrderItem</code> rows &rarr; <code>SaveChangesAsync</code> &rarr; return confirmation.</p>
+<pre><code>private static async Task&lt;string&gt; PlaceOrder(
+    CanteenDbContext db, JsonElement input, int userId)
+{
+    var items = input.GetProperty("items").EnumerateArray().ToList();
+    if (items.Count == 0)
+        return JsonSerializer.Serialize(new { error = "No items specified." });
+
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    var order = new Order { Status = "Placed", TotalAmount = 0, UserId = userId };
+
+    foreach (var line in items)
+    {
+        var menuItemId = line.GetProperty("menuItemId").GetInt32();
+        var quantity = line.GetProperty("quantity").GetInt32();
+
+        // Validate stock
+        var stock = await db.DailyStocks
+            .Include(s =&gt; s.MenuItem)
+            .FirstOrDefaultAsync(s =&gt; s.MenuItemId == menuItemId
+                                      &amp;&amp; s.Date == today
+                                      &amp;&amp; s.MenuItem.IsActive);
+
+        if (stock is null)
+            return JsonSerializer.Serialize(
+                new { error = $"Item {menuItemId} is not available today." });
+
+        var remaining = stock.QuantityAvailable - stock.QuantityOrdered;
+        if (quantity &gt; remaining)
+            return JsonSerializer.Serialize(
+                new { error = $"Only {remaining} left for {stock.MenuItem.Name}." });
+
+        // Decrement stock and add to order
+        stock.QuantityOrdered += quantity;
+        order.Items.Add(new OrderItem
+        {
+            MenuItemId = menuItemId,
+            Quantity = quantity,
+            UnitPrice = stock.MenuItem.Price
+        });
+        order.TotalAmount += quantity * stock.MenuItem.Price;
+    }
+
+    db.Orders.Add(order);
+    await db.SaveChangesAsync();
+
+    return $"Order #{order.Id} placed! Total: &#x20B9;{order.TotalAmount}";
+}</code></pre>
+      </div>
+
+      <div class="note warn">
+        <p><strong>Error handling.</strong> Tool errors are returned as JSON strings with an <code>error</code> field, not thrown as exceptions. Claude reads the error message and communicates it to the user in natural language (e.g. "Sorry, only 3 servings of Masala Dosa are left").</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="angular-ui">
+      <h2>Angular chat UI</h2>
+      <p>The frontend is an Angular 19 standalone component that renders a floating chat window. It appears when the user is logged in.</p>
+
+      <h3>Component structure</h3>
+      <div class="cols">
+        <div>
+          <h3>FAB button</h3>
+          <p>A floating action button in the bottom-right corner toggles the chat window open/closed. Uses a chat bubble icon.</p>
+        </div>
+        <div>
+          <h3>Message list</h3>
+          <p>Scrollable container showing user messages (right-aligned, teal) and assistant messages (left-aligned, grey). Auto-scrolls to the bottom on new messages.</p>
+        </div>
+        <div>
+          <h3>Input area</h3>
+          <p>Text input with a send button. Disabled during loading. Pressing Enter sends the message.</p>
+        </div>
+      </div>
+
+      <h3>Angular ChatService</h3>
+      <div class="fn">
+        <header><code>ChatService</code><span class="chip plain">Angular</span></header>
+        <p><span class="k">File</span> <code>client-angular/src/app/services/chat.service.ts</code></p>
+        <p>The Angular service sends the user's message along with the full conversation history. The JWT token is attached automatically by the <code>HttpClient</code> interceptor.</p>
+<pre><code>@Injectable({ providedIn: 'root' })
+export class ChatService {
+  constructor(private http: HttpClient) {}
+
+  async sendMessage(message: string, history: ChatMessage[]): Promise&lt;string&gt; {
+    const body: ChatRequest = { message, history };
+    const res = await firstValueFrom(
+      this.http.post&lt;ChatResponse&gt;(
+        'http://localhost:5230/api/chat', body
+      )
+    );
+    return res.reply;
+  }
+}</code></pre>
+      </div>
+
+      <h3>Conversation history</h3>
+      <p>The chat component maintains a local array of <code>ChatMessage</code> objects (<code>{ role: 'user' | 'assistant', content: string }</code>). On each send, the full history is included in the request so the backend can pass it to Claude. This enables multi-turn conversations without server-side session state.</p>
+
+      <h3>Integration in AppComponent</h3>
+      <div class="fn">
+        <header><code>AppComponent</code><span class="chip plain">Angular</span></header>
+        <p><span class="k">File</span> <code>client-angular/src/app/app.component.ts</code></p>
+        <p>The chat component is conditionally rendered when the user is logged in:</p>
+<pre><code>@Component({
+  imports: [RouterOutlet, ToastComponent, ChatComponent],
+  template: `
+    &lt;app-toast /&gt;
+    &lt;router-outlet /&gt;
+    @if (auth.isLoggedIn()) { &lt;app-chat /&gt; }
+  `,
+})
+export class AppComponent {
+  constructor(public auth: AuthService) {}
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="files">
+      <h2>Files</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>File</th><th>Role</th><th>Layer</th></tr></thead>
+        <tbody>
+          <tr><td><code>server/Services/ClaudeApiService.cs</code></td><td>Generic Claude Messages API wrapper with agentic loop</td><td><span class="chip">generic</span></td></tr>
+          <tr><td><code>server/Services/ChatService.cs</code></td><td>Business orchestrator: agent definition, tool dispatch, DB operations</td><td><span class="chip phase">business</span></td></tr>
+          <tr><td><code>server/Controllers/ChatController.cs</code></td><td>HTTP endpoint: extracts userId, delegates to ChatService</td><td><span class="chip plain">API</span></td></tr>
+          <tr><td><code>server/Program.cs</code></td><td>DI registration for ClaudeApiService (singleton) and ChatService (scoped)</td><td><span class="chip plain">startup</span></td></tr>
+          <tr><td><code>server/appsettings.json</code></td><td>Claude API key configuration</td><td><span class="chip plain">config</span></td></tr>
+          <tr><td><code>client-angular/src/app/components/chat/chat.component.ts</code></td><td>Floating chat window with FAB toggle</td><td><span class="chip">Angular</span></td></tr>
+          <tr><td><code>client-angular/src/app/services/chat.service.ts</code></td><td>HTTP client for POST /api/chat</td><td><span class="chip">Angular</span></td></tr>
+          <tr><td><code>client-angular/src/app/models/chat.model.ts</code></td><td>TypeScript interfaces: ChatMessage, ChatRequest, ChatResponse</td><td><span class="chip">Angular</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer>
+      <p>Canteen Connect &mdash; AI Chat Ordering Flow documentation. Part of the <a href="login-flow.html">login</a> &rarr; <a href="menu-management.html">menu</a> &rarr; <a href="ordering-flow.html">ordering</a> &rarr; <strong>AI chat</strong> doc series.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>
