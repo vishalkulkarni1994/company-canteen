@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canteen Connect — Agentic Loop &amp; Tool Calling Interview Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --code-bg: #eaf0ee;
+    --phase: #6d28d9;
+    --phase-soft: #f0ebff;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514; --surface: #151f1d; --ink: #e5eeec; --muted: #94a8a2;
+      --line: #25352f; --accent: #5eead4; --accent-soft: #123430;
+      --warn: #fbbf24; --warn-soft: #302509; --code-bg: #101a18;
+      --phase: #a78bfa; --phase-soft: #1e1538; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514; --surface: #151f1d; --ink: #e5eeec; --muted: #94a8a2;
+    --line: #25352f; --accent: #5eead4; --accent-soft: #123430;
+    --warn: #fbbf24; --warn-soft: #302509; --code-bg: #101a18;
+    --phase: #a78bfa; --phase-soft: #1e1538; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--font-body); padding-inline: 16px; padding-block: 24px 64px; }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    nav.toc { position: static; }
+    nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+  nav.toc { position: sticky; top: 16px; align-self: start; padding-top: 8px; font-size: 14px; }
+  nav.toc p { margin: 0 0 8px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+
+  main { min-width: 0; }
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font: 600 18px/1.3 var(--font-display); margin: 28px 0 8px; }
+  h4 { font: 600 15px/1.3 var(--font-display); margin: 20px 0 6px; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  section { padding-block: 40px 8px; border-top: 1px solid var(--line); margin-top: 32px; scroll-margin-top: 16px; }
+  header.top + section { margin-top: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; max-width: 72ch; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+
+  code { font: 500 .88em var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; font: 400 13.5px/1.55 var(--font-mono); }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.phase { background: var(--phase-soft); color: var(--phase); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 18px; max-width: 72ch; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .cols > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .cols h3 { margin-top: 0; }
+  .cols p:last-child, .cols ul:last-child { margin-bottom: 0; }
+
+  .qa { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0; margin: 0 0 16px; overflow: hidden; }
+  .qa summary { padding: 14px 18px; cursor: pointer; font: 600 15px/1.4 var(--font-display); color: var(--ink); list-style: none; display: flex; align-items: flex-start; gap: 10px; }
+  .qa summary::before { content: 'Q'; font: 600 12px/22px var(--font-mono); min-width: 22px; height: 22px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+  .qa summary::-webkit-details-marker { display: none; }
+  .qa[open] summary { border-bottom: 1px solid var(--line); }
+  .qa .answer { padding: 14px 18px 6px; }
+  .qa .answer::before { content: 'A'; font: 600 12px/22px var(--font-mono); min-width: 22px; height: 22px; text-align: center; border-radius: 50%; background: var(--phase-soft); color: var(--phase); display: inline-block; margin-right: 8px; vertical-align: top; }
+  .qa pre { margin-top: 10px; }
+
+  ol.trace { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; margin: 0 0 18px; max-width: none; }
+  ol.trace li { counter-increment: s; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  ol.trace li::before { content: counter(s); font: 600 14px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  ol.trace li > div > :last-child { margin-bottom: 0; }
+  ol.trace b { display: block; margin-bottom: 2px; }
+
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 0 0 20px; }
+  .diagram svg { display: block; min-width: 720px; width: 100%; height: auto; }
+
+  .scroll { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#what-is-it">What is it?</a></li>
+      <li><a href="#why-hardest">Why it's the hardest part</a></li>
+      <li><a href="#how-we-built">How we built it</a></li>
+      <li><a href="#walkthrough">Step-by-step walkthrough</a></li>
+      <li><a href="#code-deep-dive">Code deep-dive</a></li>
+      <li><a href="#interview-qa">Interview Q&amp;A</a></li>
+      <li><a href="#patterns">Design patterns used</a></li>
+      <li><a href="#comparison">vs RAG vs MCP</a></li>
+      <li><a href="#gotchas">Production gotchas</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">company-canteen &middot; interview prep</p>
+      <h1>Agentic loop &amp; tool calling</h1>
+      <p class="lede">A comprehensive interview guide explaining what an agentic loop is, why it's the hardest part of AI integration, and exactly how we implemented it in our canteen app &mdash; with code walkthrough, interview Q&amp;A, and comparison to RAG and MCP.</p>
+    </header>
+
+    <!-- ================================================================ -->
+    <section id="what-is-it">
+      <h2>What is an agentic loop?</h2>
+      <p>An <strong>agentic loop</strong> is a pattern where an AI model doesn't just answer a question &mdash; it <em>takes actions</em>, <em>observes results</em>, and <em>decides what to do next</em> in a loop until the task is complete. Instead of one request &rarr; one response, the AI becomes an <strong>agent</strong> that can interact with the real world.</p>
+
+      <div class="cols">
+        <div>
+          <h3>Simple LLM call <span class="chip plain">one-shot</span></h3>
+          <p>User asks &rarr; LLM responds &rarr; done.</p>
+          <p>Like asking someone a question and getting an answer. The LLM can only use what it already knows.</p>
+        </div>
+        <div>
+          <h3>Agentic loop <span class="chip">multi-round</span></h3>
+          <p>User asks &rarr; LLM thinks &rarr; calls a tool &rarr; gets data &rarr; thinks again &rarr; maybe calls another tool &rarr; finally responds.</p>
+          <p>Like hiring an assistant who can look things up, make calls, and get things done for you.</p>
+        </div>
+      </div>
+
+      <h3>Tool calling &mdash; the mechanism</h3>
+      <p><strong>Tool calling</strong> (also called "function calling") is the mechanism that makes agentic loops possible. You tell the LLM: "Here are functions you can call and their parameters." The LLM doesn't execute the functions itself &mdash; it returns a structured request saying "I want to call function X with parameters Y." Your code then executes the function, feeds the result back to the LLM, and the cycle continues.</p>
+
+      <div class="note">
+        <p><strong>Key insight:</strong> The LLM never runs code itself. It only <em>decides</em> which tool to call and what arguments to pass. Your application code is what actually executes the tool and returns the result. This is a critical safety boundary.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="why-hardest">
+      <h2>Why it's the hardest part</h2>
+      <p>Building an agentic loop is harder than a simple API call because you must solve several problems simultaneously:</p>
+
+      <ol class="trace">
+        <li><div>
+          <b>The loop itself</b>
+          <p>You need a <code>while</code>/<code>for</code> loop that keeps calling the API until Claude says "I'm done" (returns <code>stop_reason: "end_turn"</code> instead of <code>"tool_use"</code>). Getting this right means handling both exit conditions and preventing infinite loops.</p>
+        </div></li>
+        <li><div>
+          <b>Message protocol</b>
+          <p>Claude's conversation protocol is strict. After Claude returns a <code>tool_use</code> block, you must send the tool result back as a <code>user</code> message with <code>type: "tool_result"</code> and the matching <code>tool_use_id</code>. One mismatch and the API returns a 400 error.</p>
+        </div></li>
+        <li><div>
+          <b>Tool definitions with JSON Schema</b>
+          <p>Each tool needs a name, description, and <code>input_schema</code> (JSON Schema). The description is crucial &mdash; it tells Claude <em>when</em> to use the tool. A bad description means Claude calls the wrong tool or doesn't call any.</p>
+        </div></li>
+        <li><div>
+          <b>Separation of concerns</b>
+          <p>The loop logic (call API, check stop_reason, feed results back) should be separate from business logic (what tools exist, what they do). Otherwise you end up with a monolithic class that's impossible to test or reuse.</p>
+        </div></li>
+        <li><div>
+          <b>Error handling across rounds</b>
+          <p>What if the API call fails on round 3 of 5? What if a tool throws an exception? What if Claude asks for a tool that doesn't exist? Each failure mode needs handling without corrupting the conversation state.</p>
+        </div></li>
+        <li><div>
+          <b>Safety cap</b>
+          <p>Without a maximum iteration count, a confused model could loop forever, burning API credits. You need a <code>MaxToolRounds</code> constant (we use 10) as a circuit breaker.</p>
+        </div></li>
+      </ol>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="how-we-built">
+      <h2>How we built it</h2>
+      <p>We separated the system into three layers, following the same separation pattern used in V3 TradeCapture pipeline:</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 780 420" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#0f766e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+
+          <rect x="20" y="20" width="740" height="380" rx="16" fill="none" stroke="#d8e2de" stroke-width="1" stroke-dasharray="6 3"/>
+          <text x="40" y="50" font-family="'JetBrains Mono', monospace" font-size="11" fill="#55655f" letter-spacing=".06em" text-transform="uppercase">OUR APPLICATION</text>
+
+          <rect x="60" y="80" width="220" height="100" rx="10" fill="#d8eeea" stroke="#0f766e" stroke-width="1"/>
+          <text x="170" y="115" text-anchor="middle" font-family="'Bricolage Grotesque', sans-serif" font-weight="700" font-size="16" fill="#0f766e">IClaudeMessageClient</text>
+          <text x="170" y="140" text-anchor="middle" font-family="'Instrument Sans', sans-serif" font-size="13" fill="#55655f">Transport layer</text>
+          <text x="170" y="160" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" fill="#55655f">HTTP or SDK</text>
+
+          <rect x="320" y="80" width="200" height="100" rx="10" fill="#f0ebff" stroke="#6d28d9" stroke-width="1"/>
+          <text x="420" y="115" text-anchor="middle" font-family="'Bricolage Grotesque', sans-serif" font-weight="700" font-size="16" fill="#6d28d9">ClaudeApiService</text>
+          <text x="420" y="140" text-anchor="middle" font-family="'Instrument Sans', sans-serif" font-size="13" fill="#55655f">The agentic loop</text>
+          <text x="420" y="160" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" fill="#55655f">MaxToolRounds = 10</text>
+
+          <rect x="560" y="80" width="180" height="100" rx="10" fill="#fbeedb" stroke="#a14a07" stroke-width="1"/>
+          <text x="650" y="115" text-anchor="middle" font-family="'Bricolage Grotesque', sans-serif" font-weight="700" font-size="16" fill="#a14a07">ChatService</text>
+          <text x="650" y="140" text-anchor="middle" font-family="'Instrument Sans', sans-serif" font-size="13" fill="#55655f">Business logic</text>
+          <text x="650" y="160" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" fill="#55655f">Tools + dispatch</text>
+
+          <line x1="280" y1="130" x2="318" y2="130" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a)"/>
+          <line x1="520" y1="130" x2="558" y2="130" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a)"/>
+
+          <rect x="60" y="230" width="460" height="150" rx="10" fill="none" stroke="#d8e2de" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="80" y="258" font-family="'JetBrains Mono', monospace" font-size="11" fill="#55655f" letter-spacing=".06em">THE AGENTIC LOOP (inside ClaudeApiService)</text>
+
+          <rect x="90" y="275" width="140" height="40" rx="6" fill="#d8eeea" stroke="#0f766e" stroke-width="0.5"/>
+          <text x="160" y="300" text-anchor="middle" font-family="'Instrument Sans', sans-serif" font-size="13" fill="#0f766e">Send to Claude</text>
+
+          <line x1="230" y1="295" x2="260" y2="295" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a)"/>
+
+          <rect x="262" y="275" width="120" height="40" rx="6" fill="#f0ebff" stroke="#6d28d9" stroke-width="0.5"/>
+          <text x="322" y="300" text-anchor="middle" font-family="'Instrument Sans', sans-serif" font-size="13" fill="#6d28d9">tool_use?</text>
+
+          <line x1="382" y1="295" x2="412" y2="295" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a)"/>
+          <text x="397" y="287" font-family="'JetBrains Mono', monospace" font-size="10" fill="#55655f">yes</text>
+
+          <rect x="414" y="275" width="85" height="40" rx="6" fill="#fbeedb" stroke="#a14a07" stroke-width="0.5"/>
+          <text x="456" y="300" text-anchor="middle" font-family="'Instrument Sans', sans-serif" font-size="13" fill="#a14a07">Run tool</text>
+
+          <path d="M456 315 L456 350 L160 350 L160 315" fill="none" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a)"/>
+          <text x="308" y="366" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="#55655f">feed result back, loop again</text>
+
+          <line x1="322" y1="315" x2="322" y2="335" stroke="#6d28d9" stroke-width="1" stroke-dasharray="3 2"/>
+          <text x="360" y="340" font-family="'Instrument Sans', sans-serif" font-size="12" fill="#6d28d9">no &rarr; return text response</text>
+        </svg>
+      </div>
+
+      <div class="scroll">
+        <table>
+          <tr><th>Layer</th><th>File</th><th>Responsibility</th><th>Knows about</th></tr>
+          <tr>
+            <td><span class="chip">Transport</span></td>
+            <td><code>IClaudeMessageClient.cs</code><br><code>HttpClaudeClient.cs</code><br><code>SdkClaudeClient.cs</code></td>
+            <td>Send messages to Claude API, return typed response</td>
+            <td>HTTP headers, JSON serialization, API endpoint</td>
+          </tr>
+          <tr>
+            <td><span class="chip phase">Loop</span></td>
+            <td><code>ClaudeApiService.cs</code></td>
+            <td>Run the agentic loop: call &rarr; check &rarr; dispatch &rarr; repeat</td>
+            <td>Stop reasons, message protocol, tool result format</td>
+          </tr>
+          <tr>
+            <td><span class="chip warn">Business</span></td>
+            <td><code>ChatService.cs</code></td>
+            <td>Define tools, execute tool logic, query database</td>
+            <td>Canteen menu, orders, users, database</td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="walkthrough">
+      <h2>Step-by-step walkthrough</h2>
+      <p>Let's trace what happens when a user types <em>"I want to order 2 chai"</em> in the chat:</p>
+
+      <ol class="trace">
+        <li><div>
+          <b>Angular &rarr; ChatController</b>
+          <p>The Angular <code>ChatComponent</code> sends a POST to <code>/api/chat</code> with the message and JWT token. The controller extracts <code>userId</code> from the JWT claims and calls <code>ChatService.SendMessage()</code>.</p>
+        </div></li>
+        <li><div>
+          <b>ChatService &rarr; ClaudeApiService</b>
+          <p><code>ChatService</code> calls <code>claudeApi.SendAsync()</code> passing: the user's message, the agent definition (model, system prompt, tools), and a <strong>dispatchTool callback</strong> that captures the user's ID via a lambda closure: <code>(toolName, input) => DispatchTool(toolName, input, userId)</code>.</p>
+        </div></li>
+        <li><div>
+          <b>Round 1: Claude decides to check the menu</b>
+          <p>Claude receives the user's message with two available tools. It reasons: "The user wants to order chai, I should first check if it's available." It returns:</p>
+          <pre><code>{
+  "stop_reason": "tool_use",
+  "content": [
+    { "type": "text", "text": "Let me check today's menu for chai." },
+    { "type": "tool_use", "id": "toolu_01X...", "name": "get_today_menu", "input": {} }
+  ]
+}</code></pre>
+        </div></li>
+        <li><div>
+          <b>ClaudeApiService executes the tool</b>
+          <p>The loop sees <code>stop_reason: "tool_use"</code>, finds the <code>tool_use</code> block, and calls the <code>dispatchTool</code> callback. This triggers <code>ChatService.DispatchTool("get_today_menu", {})</code>, which queries the SQLite database and returns JSON with today's menu items.</p>
+        </div></li>
+        <li><div>
+          <b>Feed result back as a message</b>
+          <p>The loop adds Claude's response as an <code>assistant</code> message, then adds the tool result as a <code>user</code> message with <code>type: "tool_result"</code> and the matching <code>tool_use_id</code>. This is Claude's conversation protocol &mdash; tool results must come from the user role.</p>
+        </div></li>
+        <li><div>
+          <b>Round 2: Claude confirms and places the order</b>
+          <p>Claude now has the menu data. It sees chai is available (say, menuItemId: 5, price: &#8377;15, 20 remaining). It returns another <code>tool_use</code> for <code>place_order</code> with <code>{"items": [{"menuItemId": 5, "quantity": 2}]}</code>.</p>
+        </div></li>
+        <li><div>
+          <b>ClaudeApiService executes place_order</b>
+          <p>The callback routes to <code>PlaceOrder()</code>, which validates stock, creates an <code>Order</code> entity, updates <code>DailyStock.QuantityOrdered</code>, saves to the database, and returns "Order #42 placed! 2x Chai. Total: &#8377;30".</p>
+        </div></li>
+        <li><div>
+          <b>Round 3: Claude responds with final text</b>
+          <p>Claude gets the order confirmation and returns <code>stop_reason: "end_turn"</code> with a friendly message: "Your order for 2 chai (&#8377;30) has been placed! Order #42 is now being prepared." The loop exits, the text is returned through the call stack to Angular.</p>
+        </div></li>
+      </ol>
+
+      <div class="note">
+        <p><strong>3 rounds, 3 API calls, 2 tool executions</strong> &mdash; all invisible to the user. They just see "I want 2 chai" &rarr; "Your order has been placed!" The agentic loop made three separate decisions autonomously.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="code-deep-dive">
+      <h2>Code deep-dive</h2>
+      <p>Let's look at the actual code for each layer with annotations on why each line matters.</p>
+
+      <h3>The agentic loop &mdash; ClaudeApiService.cs</h3>
+      <p>This is the heart of the system. It's ~50 lines that handle any number of tool-calling rounds:</p>
+      <pre><code>public async Task&lt;string&gt; SendAsync(
+    string query,
+    ClaudeAgentDefinition agentDef,
+    Func&lt;string, JsonElement, Task&lt;string&gt;&gt; dispatchTool,  // callback
+    List&lt;ChatMessage&gt;? history = null,
+    CancellationToken ct = default)
+{
+    // Build conversation: history + new user message
+    var messages = new List&lt;object&gt;();
+    if (history != null)
+        foreach (var msg in history)
+            messages.Add(new { role = msg.Role, content = msg.Content });
+    messages.Add(new { role = "user", content = query });
+
+    string result = string.Empty;
+
+    // THE LOOP — max 10 rounds to prevent runaway costs
+    for (var round = 0; round &lt; MaxToolRounds; round++)
+    {
+        // Call Claude via whichever client is injected (HTTP or SDK)
+        var response = await client.SendAsync(agentDef, messages, ct);
+
+        // EXIT CONDITION: Claude is done talking
+        if (response.StopReason != "tool_use")
+        {
+            result = string.Join("\n", response.Content
+                .Where(b =&gt; b.Type == "text")
+                .Select(b =&gt; b.Text));
+            break;  // ← loop exits here
+        }
+
+        // CONTINUE: Claude wants to use tools
+        // Add Claude's response to conversation
+        messages.Add(new {
+            role = "assistant",
+            content = response.Content.Select(b =&gt; b.Type == "text"
+                ? (object)new { type = "text", text = b.Text }
+                : new { type = "tool_use", id = b.Id,
+                        name = b.Name, input = b.Input }
+            ).ToArray()
+        });
+
+        // Execute each tool call via the callback
+        var toolResults = new List&lt;object&gt;();
+        foreach (var block in response.Content
+                     .Where(b =&gt; b.Type == "tool_use"))
+        {
+            var toolResult = await dispatchTool(block.Name!, block.Input);
+            toolResults.Add(new {
+                type = "tool_result",
+                tool_use_id = block.Id,
+                content = toolResult
+            });
+        }
+
+        // Add results as "user" message (Claude's protocol)
+        messages.Add(new { role = "user",
+                           content = toolResults.ToArray() });
+        // Loop continues → next round
+    }
+
+    return result;
+}</code></pre>
+
+      <h3>The callback pattern &mdash; ChatService.cs</h3>
+      <p>The key design decision: <code>ClaudeApiService</code> doesn't know what tools exist. It receives a <code>Func&lt;string, JsonElement, Task&lt;string&gt;&gt;</code> callback. <code>ChatService</code> provides this callback with a lambda that <strong>captures userId</strong>:</p>
+      <pre><code>// ChatService passes this to ClaudeApiService:
+dispatchTool: (toolName, input) =&gt; DispatchTool(toolName, input, userId)
+
+// The dispatch method routes by tool name:
+private async Task&lt;string&gt; DispatchTool(
+    string toolName, JsonElement input, int userId)
+{
+    using var scope = scopeFactory.CreateScope();  // fresh DI scope
+    var db = scope.ServiceProvider
+                  .GetRequiredService&lt;CanteenDbContext&gt;();
+
+    return toolName switch
+    {
+        "get_today_menu" =&gt; await GetTodayMenu(db),
+        "place_order"    =&gt; await PlaceOrder(db, input, userId),
+        var unknown      =&gt; throw new NotSupportedException(
+                                $"Unknown tool '{unknown}'.")
+    };
+}</code></pre>
+
+      <div class="note">
+        <p><strong>Why <code>IServiceScopeFactory</code>?</strong> <code>ClaudeApiService</code> is a singleton (it holds no per-request state). But <code>CanteenDbContext</code> is scoped (one per HTTP request). When a tool callback fires during the loop, the original request scope may not match. Creating a fresh scope with <code>scopeFactory.CreateScope()</code> gives each tool execution its own clean database context.</p>
+      </div>
+
+      <h3>Tool definitions &mdash; the JSON Schema</h3>
+      <p>Claude needs to know what tools are available and what parameters they accept. This is defined as JSON Schema objects:</p>
+      <pre><code>new {
+    name = "place_order",
+    description = "Place an order for the user. Each item needs a "
+                + "menuItemId and quantity. Only call this after "
+                + "confirming the order details with the user.",
+    input_schema = new {
+        type = "object",
+        properties = new {
+            items = new {
+                type = "array",
+                description = "List of items to order",
+                items = new {
+                    type = "object",
+                    properties = new {
+                        menuItemId = new { type = "integer" },
+                        quantity   = new { type = "integer" }
+                    },
+                    required = new[] { "menuItemId", "quantity" }
+                }
+            }
+        },
+        required = new[] { "items" }
+    }
+}</code></pre>
+      <p>The <code>description</code> is critical &mdash; it's the natural-language instruction that tells Claude <em>when</em> and <em>how</em> to use the tool. Notice the instruction "Only call this after confirming the order details" &mdash; this prevents Claude from placing orders without user confirmation.</p>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="interview-qa">
+      <h2>Interview Q&amp;A</h2>
+      <p>Common interview questions about agentic loops and tool calling, answered with examples from our canteen app.</p>
+
+      <details class="qa" open>
+        <summary>What is an agentic loop and how does it differ from a simple API call?</summary>
+        <div class="answer">
+          <p>A simple API call is one request, one response &mdash; like asking "translate this to French." An agentic loop is a <strong>multi-round conversation</strong> where the AI can take actions between rounds. The AI decides what to do, executes tools, observes results, and keeps going until the task is complete.</p>
+          <p>In our canteen app, when a user says "order 2 chai," Claude autonomously decides to: (1) check today's menu, (2) verify chai is available, (3) place the order. That's 3 API rounds with 2 tool calls, all invisible to the user.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What is tool calling / function calling?</summary>
+        <div class="answer">
+          <p>Tool calling is the mechanism where you define functions (tools) with their parameters as JSON Schema, send them to the LLM alongside the user's message, and the LLM can request to call these functions. The LLM doesn't execute anything &mdash; it returns a structured object saying "call function X with arguments Y." Your code executes the function and feeds the result back.</p>
+          <p>In our app, we define two tools: <code>get_today_menu</code> (no params) and <code>place_order</code> (takes an array of items). Claude decides which to call based on the conversation context.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How do you prevent infinite loops when the AI keeps calling tools?</summary>
+        <div class="answer">
+          <p>We use a <code>MaxToolRounds = 10</code> constant as a circuit breaker. The loop runs inside a <code>for</code> loop capped at 10 iterations. In practice, a typical canteen interaction takes 2-3 rounds. If something goes wrong and Claude keeps requesting tools, the loop exits after 10 rounds and returns whatever text Claude has produced so far.</p>
+          <pre><code>for (var round = 0; round &lt; MaxToolRounds; round++)
+{
+    var response = await client.SendAsync(agentDef, messages, ct);
+    if (response.StopReason != "tool_use")
+        break;  // Claude is done
+    // ... execute tools and continue
+}</code></pre>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How do you separate business logic from the AI orchestration?</summary>
+        <div class="answer">
+          <p>We follow a <strong>callback pattern</strong> inspired by the V3 TradeCapture pipeline separation. <code>ClaudeApiService</code> owns the loop but knows nothing about canteen logic. <code>ChatService</code> owns the tools and business logic but knows nothing about the API protocol. They communicate through a <code>Func&lt;string, JsonElement, Task&lt;string&gt;&gt;</code> delegate.</p>
+          <p>This means <code>ClaudeApiService</code> is <strong>reusable</strong> &mdash; you could build a completely different AI feature (analytics, recommendations) by just providing different tool definitions and a different dispatch callback. The loop code stays identical.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What is the stop_reason and why does it matter?</summary>
+        <div class="answer">
+          <p>Claude's API returns a <code>stop_reason</code> field that tells you why the response ended:</p>
+          <ul>
+            <li><code>"end_turn"</code> &mdash; Claude is done. Extract the text and return it to the user.</li>
+            <li><code>"tool_use"</code> &mdash; Claude wants to call one or more tools. Execute them and feed the results back.</li>
+            <li><code>"max_tokens"</code> &mdash; The response was cut off because it hit the token limit.</li>
+          </ul>
+          <p>The <code>stop_reason</code> is the <strong>control signal</strong> that drives the loop. Our code checks <code>if (response.StopReason != "tool_use") break;</code> &mdash; any stop reason other than <code>tool_use</code> exits the loop.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Why do tool results go in a "user" role message?</summary>
+        <div class="answer">
+          <p>This is Claude's conversation protocol. The message sequence must alternate between <code>user</code> and <code>assistant</code> roles. When Claude returns a <code>tool_use</code> block, that's an <code>assistant</code> message. The tool results must come back as a <code>user</code> message so the alternation continues.</p>
+          <p>Each tool result must include the <code>tool_use_id</code> from the original request so Claude can match results to the tools it called. Without this ID, the API returns a 400 error.</p>
+          <pre><code>// Add Claude's tool request as assistant message
+messages.Add(new { role = "assistant", content = ... });
+
+// Add tool results as user message
+messages.Add(new { role = "user", content = new[] {
+    new { type = "tool_result",
+          tool_use_id = block.Id,    // must match!
+          content = toolResult }
+}});</code></pre>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What is the strategy pattern in your Claude integration?</summary>
+        <div class="answer">
+          <p>We use the <strong>strategy pattern</strong> for the transport layer. The <code>IClaudeMessageClient</code> interface defines the contract: <code>SendAsync(agentDef, messages, ct)</code> returns <code>ClaudeResponse</code>. Two implementations exist:</p>
+          <ul>
+            <li><code>HttpClaudeClient</code> &mdash; Raw HTTP with manual JSON serialization (default)</li>
+            <li><code>SdkClaudeClient</code> &mdash; Anthropic SDK package (opt-in via config)</li>
+          </ul>
+          <p>A boolean flag in <code>appsettings.json</code> (<code>"UseSdk": false</code>) controls which implementation gets registered in DI. The agentic loop in <code>ClaudeApiService</code> works identically with either one.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How do you handle DI scoping when a singleton service needs scoped dependencies?</summary>
+        <div class="answer">
+          <p><code>ClaudeApiService</code> is registered as a <strong>singleton</strong> (it holds no per-request state). But each tool call needs a fresh <code>CanteenDbContext</code>, which is <strong>scoped</strong>. We solve this with <code>IServiceScopeFactory</code>:</p>
+          <pre><code>private async Task&lt;string&gt; DispatchTool(...)
+{
+    using var scope = scopeFactory.CreateScope();
+    var db = scope.ServiceProvider
+                  .GetRequiredService&lt;CanteenDbContext&gt;();
+    // ... use db, scope disposes when done
+}</code></pre>
+          <p>Each tool execution creates its own DI scope, gets a fresh DbContext, uses it, and disposes it when the <code>using</code> block ends. This is the standard pattern for singletons that need scoped services.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What happens if Claude calls a tool that doesn't exist?</summary>
+        <div class="answer">
+          <p>Our <code>DispatchTool</code> method uses a C# <code>switch</code> expression with a discard pattern as the fallback:</p>
+          <pre><code>return toolName switch
+{
+    "get_today_menu" =&gt; await GetTodayMenu(db),
+    "place_order"    =&gt; await PlaceOrder(db, input, userId),
+    var unknown      =&gt; throw new NotSupportedException(
+                            $"Unknown tool '{unknown}'.")
+};</code></pre>
+          <p>In practice, Claude almost never calls a non-existent tool because the tool definitions constrain what it knows about. But the guard is there for safety. The exception is caught by the <code>try/catch</code> in <code>ChatService.SendMessage()</code>, which returns a friendly error to the user.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How does the lambda closure capture the user ID?</summary>
+        <div class="answer">
+          <p>When <code>ChatService</code> calls the agentic loop, it passes a lambda that closes over <code>userId</code>:</p>
+          <pre><code>return await claudeApi.SendAsync(
+    userMessage,
+    AgentDef,
+    dispatchTool: (toolName, input) =&gt;
+        DispatchTool(toolName, input, userId),  // userId captured here
+    history,
+    CancellationToken.None);</code></pre>
+          <p><code>ClaudeApiService</code> never sees or knows about <code>userId</code>. It just calls the delegate. The lambda captures <code>userId</code> from the enclosing scope, so when <code>place_order</code> runs three rounds later, it still knows which user to create the order for.</p>
+          <p>This is a powerful pattern &mdash; the generic loop becomes user-aware without any user-specific code.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Can Claude call multiple tools in a single round?</summary>
+        <div class="answer">
+          <p>Yes. Claude can return multiple <code>tool_use</code> blocks in a single response. Our loop handles this with a <code>foreach</code> that iterates over all tool_use blocks:</p>
+          <pre><code>foreach (var block in response.Content
+             .Where(b =&gt; b.Type == "tool_use"))
+{
+    var toolResult = await dispatchTool(block.Name!, block.Input);
+    toolResults.Add(new { type = "tool_result",
+                          tool_use_id = block.Id,
+                          content = toolResult });
+}</code></pre>
+          <p>All tool results are collected and sent back as a single user message. This is called <strong>parallel tool use</strong> &mdash; Claude might decide to check the menu AND look up user preferences in one round.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How would you add a new tool to the system?</summary>
+        <div class="answer">
+          <p>Three steps, all in <code>ChatService.cs</code> only:</p>
+          <ol>
+            <li><strong>Define the tool</strong> &mdash; add a JSON Schema object to <code>BuildToolDefinitions()</code></li>
+            <li><strong>Add the route</strong> &mdash; add a case to the <code>switch</code> in <code>DispatchTool()</code></li>
+            <li><strong>Implement the logic</strong> &mdash; write the method that executes the tool</li>
+          </ol>
+          <p>No changes needed in <code>ClaudeApiService</code>, <code>HttpClaudeClient</code>, the controller, or the frontend. This is the power of the separation &mdash; adding new capabilities is purely a business logic task.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="patterns">
+      <h2>Design patterns used</h2>
+
+      <div class="scroll">
+        <table>
+          <tr><th>Pattern</th><th>Where</th><th>Why</th></tr>
+          <tr>
+            <td><strong>Strategy</strong></td>
+            <td><code>IClaudeMessageClient</code></td>
+            <td>Swap HTTP/SDK implementation without changing the loop</td>
+          </tr>
+          <tr>
+            <td><strong>Callback / delegate</strong></td>
+            <td><code>Func&lt;string, JsonElement, Task&lt;string&gt;&gt;</code></td>
+            <td>Decouple loop from business logic; enable closure over userId</td>
+          </tr>
+          <tr>
+            <td><strong>Separation of concerns</strong></td>
+            <td>Transport / Loop / Business layers</td>
+            <td>Each layer changes independently; loop is reusable</td>
+          </tr>
+          <tr>
+            <td><strong>Dependency injection</strong></td>
+            <td><code>Program.cs</code> conditional registration</td>
+            <td>Config-driven implementation selection at startup</td>
+          </tr>
+          <tr>
+            <td><strong>Service locator</strong> (scoped)</td>
+            <td><code>IServiceScopeFactory</code></td>
+            <td>Create fresh DI scopes for each tool execution in singleton</td>
+          </tr>
+          <tr>
+            <td><strong>Circuit breaker</strong></td>
+            <td><code>MaxToolRounds = 10</code></td>
+            <td>Prevent infinite loop and runaway API costs</td>
+          </tr>
+          <tr>
+            <td><strong>DTO pattern</strong></td>
+            <td><code>ClaudeResponse</code>, <code>ContentBlock</code></td>
+            <td>Common contract between HTTP and SDK clients</td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="comparison">
+      <h2>Tool calling vs RAG vs MCP</h2>
+      <p>Interviewers often ask you to compare these. Here's a clear breakdown:</p>
+
+      <div class="scroll">
+        <table>
+          <tr><th>Aspect</th><th>Tool calling</th><th>RAG</th><th>MCP</th></tr>
+          <tr>
+            <td><strong>What it does</strong></td>
+            <td>LLM calls functions to take actions or fetch structured data</td>
+            <td>Search documents/text to add context before asking the LLM</td>
+            <td>Standardized protocol for connecting LLMs to external tools/data</td>
+          </tr>
+          <tr>
+            <td><strong>Data type</strong></td>
+            <td>Structured (databases, APIs, functions)</td>
+            <td>Unstructured (documents, PDFs, knowledge bases)</td>
+            <td>Any (it's a transport protocol)</td>
+          </tr>
+          <tr>
+            <td><strong>Who decides?</strong></td>
+            <td>The LLM decides which tool to call and with what params</td>
+            <td>Your code decides what to search; LLM uses the retrieved context</td>
+            <td>The LLM decides (MCP tools are tool calls over a protocol)</td>
+          </tr>
+          <tr>
+            <td><strong>Loop?</strong></td>
+            <td>Yes &mdash; multi-round agentic loop</td>
+            <td>Usually single-shot: retrieve &rarr; augment &rarr; generate</td>
+            <td>Yes &mdash; the MCP client runs an agentic loop</td>
+          </tr>
+          <tr>
+            <td><strong>Example</strong></td>
+            <td>User says "order chai" &rarr; Claude calls <code>place_order</code></td>
+            <td>User asks "is paneer gluten-free?" &rarr; search allergen docs &rarr; answer</td>
+            <td>Claude Desktop connects to your app via MCP protocol</td>
+          </tr>
+          <tr>
+            <td><strong>Our canteen app</strong></td>
+            <td><span class="chip">Used</span> ClaudeApiService agentic loop</td>
+            <td><span class="chip plain">Not yet</span> Could add for nutrition/allergen docs</td>
+            <td><span class="chip plain">Not yet</span> Could expose canteen as MCP server</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="note">
+        <p><strong>Key interview answer:</strong> MCP uses tool calling under the hood. The difference is <em>where</em> the loop runs and <em>how</em> tools are connected. With direct tool calling, you own the loop. With MCP, the MCP client (like Claude Desktop) owns the loop, and your app just exposes tools as an MCP server.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="gotchas">
+      <h2>Production gotchas</h2>
+      <p>Things interviewers like to hear you've thought about:</p>
+
+      <div class="cols">
+        <div>
+          <h3>Cost control</h3>
+          <p>Each loop round is a separate API call. A 3-round interaction sends the full conversation each time, so input tokens compound. We use <code>claude-haiku-5-5</code> (cheapest at $0.10/$0.50 per MTok) and track token usage across rounds for monitoring.</p>
+        </div>
+        <div>
+          <h3>Idempotency</h3>
+          <p>If the API call fails after <code>place_order</code> runs but before Claude gets the result, retrying the loop could place a duplicate order. In production, tool calls that mutate state should be idempotent (e.g., use an idempotency key).</p>
+        </div>
+      </div>
+      <div class="cols">
+        <div>
+          <h3>Tool descriptions matter</h3>
+          <p>Claude decides which tool to call based on the <code>description</code> field, not the function name. A vague description like "do stuff with orders" leads to incorrect tool usage. We write specific descriptions: "Only call this after confirming the order details with the user."</p>
+        </div>
+        <div>
+          <h3>Security boundary</h3>
+          <p>Claude can only call tools you define. It can't access the filesystem, network, or database directly. Each tool is a controlled API &mdash; <code>place_order</code> validates stock, checks the user, and enforces business rules. The LLM is sandboxed by the tool definitions.</p>
+        </div>
+      </div>
+      <div class="cols">
+        <div>
+          <h3>Context window growth</h3>
+          <p>Each round appends to the messages array. By round 5, the input includes all previous tool calls and results. With large tool responses, this can hit Claude's context limit. Solutions: summarize old tool results, or cap tool response size.</p>
+        </div>
+        <div>
+          <h3>Streaming</h3>
+          <p>Our current implementation waits for the full response. In production, streaming (SSE) gives users instant feedback. The challenge: with streaming, you need to detect <code>tool_use</code> blocks from the stream, which adds complexity to the loop.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>Canteen Connect &mdash; <a href="index.html">Documentation index</a> &middot; <a href="ai-chat-flow.html">AI chat flow</a></p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>
