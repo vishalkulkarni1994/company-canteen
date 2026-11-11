@@ -27,6 +27,7 @@ else
 
 builder.Services.AddSingleton<ClaudeApiService>();
 builder.Services.AddScoped<ChatService>();
+builder.Services.AddScoped<AnalyticsService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
