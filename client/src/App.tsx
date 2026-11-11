@@ -6,6 +6,7 @@ import MenuPage from "./pages/MenuPage";
 import StockPage from "./pages/StockPage";
 import OrdersPage from "./pages/OrdersPage";
 import KitchenPage from "./pages/KitchenPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import ToastContainer from "./components/Toast";
 import useOrderNotifications from "./hooks/useOrderNotifications";
 
@@ -41,6 +42,7 @@ function AppShell() {
           <Route path="/admin/menu" element={<AdminRoute><MenuPage /></AdminRoute>} />
           <Route path="/admin/stock" element={<AdminRoute><StockPage /></AdminRoute>} />
           <Route path="/admin/orders" element={<AdminRoute><KitchenPage /></AdminRoute>} />
+          <Route path="/admin/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
         </Routes>
       </BrowserRouter>
     </>

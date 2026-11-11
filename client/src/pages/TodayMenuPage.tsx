@@ -119,6 +119,9 @@ export default function TodayMenuPage() {
               <button onClick={() => navigate("/admin/orders")} style={styles.navBtn}>
                 Orders
               </button>
+              <button onClick={() => navigate("/admin/analytics")} style={styles.navBtn}>
+                Analytics
+              </button>
             </>
           )}
           <button onClick={() => navigate("/orders")} style={styles.navBtn}>
