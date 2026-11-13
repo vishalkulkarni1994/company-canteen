@@ -4,6 +4,7 @@ server/obj/
 server/canteen.db
 server/canteen.db-shm
 server/canteen.db-wal
+server/appsettings.Development.json
 
 # Node
 client/node_modules/
