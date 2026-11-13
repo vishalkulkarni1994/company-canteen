@@ -164,6 +164,10 @@
       <p class="lede">A conversational ordering interface powered by Claude. Users chat with an AI assistant that browses the menu, confirms selections, and places orders &mdash; all through natural language. Built with an agentic tool-use loop inspired by the V3 TradeCapture pipeline separation pattern.</p>
     </header>
 
+    <div class="note" style="margin-top:24px;">
+      <p><strong>Updated in <a href="multi-tenant.html">Phase 09 &mdash; Multi-Tenant</a>.</strong> The AI chat tools (<code>get_today_menu</code>, <code>place_order</code>) are now company-scoped. The tool dispatch closure captures <code>companyId</code> from the JWT, so Claude can only see and order from the authenticated user's company. See the <a href="multi-tenant.html#ai-scoping">AI &amp; analytics scoping</a> section.</p>
+    </div>
+
     <!-- ================================================================ -->
     <section id="overview">
       <h2>Overview</h2>

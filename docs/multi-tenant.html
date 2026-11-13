@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canteen Connect — Multi-Tenant Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --code-bg: #eaf0ee;
+    --phase: #6d28d9;
+    --phase-soft: #f0ebff;
+    --tenant: #b45309;
+    --tenant-soft: #fef3c7;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514;
+      --surface: #151f1d;
+      --ink: #e5eeec;
+      --muted: #94a8a2;
+      --line: #25352f;
+      --accent: #5eead4;
+      --accent-soft: #123430;
+      --warn: #fbbf24;
+      --warn-soft: #302509;
+      --code-bg: #101a18;
+      --phase: #a78bfa;
+      --phase-soft: #1e1538;
+      --tenant: #fbbf24;
+      --tenant-soft: #302509;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514;
+    --surface: #151f1d;
+    --ink: #e5eeec;
+    --muted: #94a8a2;
+    --line: #25352f;
+    --accent: #5eead4;
+    --accent-soft: #123430;
+    --warn: #fbbf24;
+    --warn-soft: #302509;
+    --code-bg: #101a18;
+    --phase: #a78bfa;
+    --phase-soft: #1e1538;
+    --tenant: #fbbf24;
+    --tenant-soft: #302509;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--font-body);
+    padding-inline: 16px;
+    padding-block: 24px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    nav.toc { position: static; }
+    nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+  nav.toc { position: sticky; top: 16px; align-self: start; padding-top: 8px; font-size: 14px; }
+  nav.toc p { margin: 0 0 8px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+
+  main { min-width: 0; }
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font: 600 18px/1.3 var(--font-display); margin: 28px 0 8px; }
+  h4 { font: 600 15px/1.3 var(--font-display); margin: 20px 0 6px; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  section { padding-block: 40px 8px; border-top: 1px solid var(--line); margin-top: 32px; scroll-margin-top: 16px; }
+  header.top + section { margin-top: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; max-width: 72ch; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+
+  code { font: 500 .88em var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; font: 400 13.5px/1.55 var(--font-mono); }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .scroll { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.phase { background: var(--phase-soft); color: var(--phase); }
+  .chip.tenant { background: var(--tenant-soft); color: var(--tenant); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 18px; max-width: 72ch; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .cols > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .cols h3 { margin-top: 0; }
+  .cols p:last-child, .cols ul:last-child { margin-bottom: 0; }
+
+  .fn { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px 6px; margin: 0 0 16px; }
+  .fn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+  .fn > header code { font-size: 15px; background: none; padding: 0; color: var(--accent); }
+  .fn p { max-width: none; }
+  .fn .k { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+  .fn pre { margin-top: 4px; }
+
+  ol.trace { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; margin: 0 0 18px; max-width: none; }
+  ol.trace li { counter-increment: s; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  ol.trace li::before { content: counter(s); font: 600 14px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  ol.trace li > div > :last-child { margin-bottom: 0; }
+  ol.trace b { display: block; margin-bottom: 2px; }
+
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 0 0 20px; }
+  .diagram svg { display: block; min-width: 720px; width: 100%; height: auto; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#data-model">Data model</a></li>
+      <li><a href="#roles">Role hierarchy</a></li>
+      <li><a href="#jwt">JWT &amp; claims</a></li>
+      <li><a href="#controllers">Controller isolation</a></li>
+      <li><a href="#ai-scoping">AI &amp; analytics scoping</a></li>
+      <li><a href="#frontend">Frontend</a></li>
+      <li><a href="#superadmin">SuperAdmin dashboard</a></li>
+      <li><a href="#seed">Seed data</a></li>
+      <li><a href="#files">Files</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">company-canteen &middot; multi-tenant</p>
+      <h1>Multi-tenant architecture</h1>
+      <p class="lede">Every piece of data &mdash; menu items, orders, stock, analytics &mdash; is scoped to a Company. Users belong to exactly one company, and the system enforces data isolation from the JWT claim through every query. A SuperAdmin role provides cross-company visibility.</p>
+    </header>
+
+    <!-- ================================================================ -->
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>The canteen system serves multiple independent companies from a single database. Each company has its own menu, stock, orders, and users. The tenant boundary is enforced at two levels:</p>
+
+      <ol>
+        <li><strong>JWT claim</strong>: Every authenticated request carries a <code>CompanyId</code> claim, extracted via <code>ClaimsPrincipalExtensions</code></li>
+        <li><strong>Query filter</strong>: Every database query filters by <code>CompanyId</code>, preventing cross-company data leaks</li>
+      </ol>
+
+      <div class="cols">
+        <div>
+          <h3>Single-tenant <span class="chip plain">before</span></h3>
+          <ul>
+            <li>One shared menu for everyone</li>
+            <li>Two roles: Admin and Employee</li>
+            <li>All users see all orders</li>
+            <li>One analytics pool</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Multi-tenant <span class="chip tenant">after</span></h3>
+          <ul>
+            <li>Each company has its own menu</li>
+            <li>Three roles: User, CompanyAdmin, SuperAdmin</li>
+            <li>Data isolated by CompanyId on every entity</li>
+            <li>Analytics scoped per company; SuperAdmin sees all</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><strong>Isolation strategy: shared database, filtered queries.</strong> All companies share one SQLite database. Isolation is enforced by filtering every query with <code>WHERE CompanyId = @companyId</code>. This is simpler than database-per-tenant and sufficient for our scale. The tradeoff: a bug in a query filter could leak data between companies. Every controller method extracts <code>CompanyId</code> from the JWT and passes it to EF Core queries.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="data-model">
+      <h2>Data model</h2>
+      <p>The <code>Company</code> entity is the tenant root. Every data entity carries a <code>CompanyId</code> foreign key.</p>
+
+      <h3>Company entity</h3>
+      <div class="fn">
+        <header><code>Company</code><span class="chip tenant">tenant root</span></header>
+        <p><span class="k">File</span> <code>server/Models/Company.cs</code></p>
+<pre><code>public class Company
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection&lt;User&gt; Users { get; set; } = [];
+    public ICollection&lt;MenuItem&gt; MenuItems { get; set; } = [];
+    public ICollection&lt;Order&gt; Orders { get; set; } = [];
+}</code></pre>
+      </div>
+
+      <h3>Entity ownership</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Entity</th><th>CompanyId type</th><th>Relationship</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>User</code></td>
+            <td><code>int?</code> (nullable)</td>
+            <td>Optional FK to Company</td>
+            <td>SuperAdmin has no company &mdash; <code>CompanyId</code> is <code>null</code></td>
+          </tr>
+          <tr>
+            <td><code>MenuItem</code></td>
+            <td><code>int</code> (required)</td>
+            <td>Required FK to Company</td>
+            <td>Every menu item belongs to exactly one company</td>
+          </tr>
+          <tr>
+            <td><code>Order</code></td>
+            <td><code>int</code> (required)</td>
+            <td>Required FK to Company</td>
+            <td>Orders are company-scoped; users can only order from their own company</td>
+          </tr>
+          <tr>
+            <td><code>DailyStock</code></td>
+            <td><em>via MenuItem</em></td>
+            <td>Indirect through <code>MenuItem.CompanyId</code></td>
+            <td>Stock is per-MenuItem, which is per-Company. Queries join through <code>s.MenuItem.CompanyId</code></td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h3>EF Core configuration</h3>
+      <div class="fn">
+        <header><code>CanteenDbContext</code><span class="chip plain">DbContext</span></header>
+        <p><span class="k">File</span> <code>server/Data/CanteenDbContext.cs</code></p>
+        <p>Key configuration details for the Company entity and its relationships:</p>
+<pre><code>// Unique company name constraint
+modelBuilder.Entity&lt;Company&gt;()
+    .HasIndex(c =&gt; c.Name).IsUnique();
+
+// User → Company: optional (SuperAdmin has no company)
+modelBuilder.Entity&lt;User&gt;()
+    .HasOne(u =&gt; u.Company)
+    .WithMany(c =&gt; c.Users)
+    .HasForeignKey(u =&gt; u.CompanyId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+// MenuItem → Company: required
+modelBuilder.Entity&lt;MenuItem&gt;()
+    .HasOne(m =&gt; m.Company)
+    .WithMany(c =&gt; c.MenuItems)
+    .HasForeignKey(m =&gt; m.CompanyId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+// Order → Company: required
+modelBuilder.Entity&lt;Order&gt;()
+    .HasOne(o =&gt; o.Company)
+    .WithMany(c =&gt; c.Orders)
+    .HasForeignKey(o =&gt; o.CompanyId)
+    .OnDelete(DeleteBehavior.Restrict);</code></pre>
+        <p>All foreign keys use <code>DeleteBehavior.Restrict</code> to prevent accidental cascade deletion of an entire company's data.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="roles">
+      <h2>Role hierarchy</h2>
+      <p>Three roles form a strict hierarchy. Each role inherits the permissions of the roles below it.</p>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Role</th><th>CompanyId</th><th>Capabilities</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="chip plain">User</span></td>
+            <td>Required (non-null)</td>
+            <td>Browse own company's menu, place orders, use AI chat, view own orders</td>
+          </tr>
+          <tr>
+            <td><span class="chip">CompanyAdmin</span></td>
+            <td>Required (non-null)</td>
+            <td>Everything a User can do, plus: manage menu items, set daily stock, view all company orders, access analytics</td>
+          </tr>
+          <tr>
+            <td><span class="chip tenant">SuperAdmin</span></td>
+            <td><code>null</code></td>
+            <td>Everything a CompanyAdmin can do across all companies, plus: create companies, manage user roles, cross-company analytics</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h3>Route protection</h3>
+      <p>The React frontend defines three route guards that mirror the backend <code>[Authorize]</code> attributes:</p>
+      <div class="fn">
+        <header><code>App.tsx</code><span class="chip">route guards</span></header>
+        <p><span class="k">File</span> <code>client/src/App.tsx</code></p>
+<pre><code>// Any authenticated user
+function ProtectedRoute({ children }) {
+  const { user } = useAuth();
+  return user ? children : &lt;Navigate to="/login" /&gt;;
+}
+
+// CompanyAdmin OR SuperAdmin
+function AdminRoute({ children }) {
+  const { user } = useAuth();
+  if (user.role !== "CompanyAdmin" &amp;&amp; user.role !== "SuperAdmin")
+    return &lt;Navigate to="/" /&gt;;
+  return children;
+}
+
+// SuperAdmin only
+function SuperAdminRoute({ children }) {
+  const { user } = useAuth();
+  if (user.role !== "SuperAdmin") return &lt;Navigate to="/" /&gt;;
+  return children;
+}</code></pre>
+      </div>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Route</th><th>Guard</th><th>Backend attribute</th></tr></thead>
+        <tbody>
+          <tr><td><code>/</code> (Today's Menu)</td><td><code>ProtectedRoute</code></td><td><code>[Authorize]</code></td></tr>
+          <tr><td><code>/orders</code></td><td><code>ProtectedRoute</code></td><td><code>[Authorize]</code></td></tr>
+          <tr><td><code>/chat</code></td><td><code>ProtectedRoute</code></td><td><code>[Authorize]</code></td></tr>
+          <tr><td><code>/admin/menu</code></td><td><code>AdminRoute</code></td><td><code>[Authorize(Roles = "CompanyAdmin,SuperAdmin")]</code></td></tr>
+          <tr><td><code>/admin/stock</code></td><td><code>AdminRoute</code></td><td><code>[Authorize(Roles = "CompanyAdmin,SuperAdmin")]</code></td></tr>
+          <tr><td><code>/admin/orders</code></td><td><code>AdminRoute</code></td><td><code>[Authorize(Roles = "CompanyAdmin,SuperAdmin")]</code></td></tr>
+          <tr><td><code>/admin/analytics</code></td><td><code>AdminRoute</code></td><td><code>[Authorize(Roles = "CompanyAdmin,SuperAdmin")]</code></td></tr>
+          <tr><td><code>/admin/companies</code></td><td><code>SuperAdminRoute</code></td><td><code>[Authorize(Roles = "SuperAdmin")]</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="jwt">
+      <h2>JWT &amp; claims</h2>
+      <p>The JWT token carries the tenant context. When a user logs in, <code>AuthService</code> adds <code>CompanyId</code> as a custom claim (only when the user has a company).</p>
+
+      <div class="fn">
+        <header><code>AuthService.GenerateToken</code><span class="chip">JWT</span></header>
+        <p><span class="k">File</span> <code>server/Services/AuthService.cs</code></p>
+<pre><code>var claims = new List&lt;Claim&gt;
+{
+    new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+    new(ClaimTypes.Email, user.Email),
+    new(ClaimTypes.Name, user.Name),
+    new(ClaimTypes.Role, user.Role),
+};
+
+// Only add CompanyId for non-SuperAdmin users
+if (user.CompanyId.HasValue)
+    claims.Add(new Claim("CompanyId", user.CompanyId.Value.ToString()));</code></pre>
+      </div>
+
+      <h3>Claim extraction helpers</h3>
+      <div class="fn">
+        <header><code>ClaimsPrincipalExtensions</code><span class="chip plain">extension</span></header>
+        <p><span class="k">File</span> <code>server/Extensions/ClaimsPrincipalExtensions.cs</code></p>
+        <p>Every controller uses these extensions to extract the tenant context from the JWT:</p>
+<pre><code>public static class ClaimsPrincipalExtensions
+{
+    public static int GetUserId(this ClaimsPrincipal user)
+        =&gt; int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    public static int? GetCompanyId(this ClaimsPrincipal user)
+    {
+        var val = user.FindFirstValue("CompanyId");
+        return val is null ? null : int.Parse(val);
+    }
+
+    public static string GetRole(this ClaimsPrincipal user)
+        =&gt; user.FindFirstValue(ClaimTypes.Role)!;
+
+    public static bool IsSuperAdmin(this ClaimsPrincipal user)
+        =&gt; user.GetRole() == "SuperAdmin";
+
+    public static bool IsCompanyAdmin(this ClaimsPrincipal user)
+        =&gt; user.GetRole() is "CompanyAdmin" or "SuperAdmin";
+}</code></pre>
+        <p>Note: <code>IsCompanyAdmin()</code> returns <code>true</code> for both CompanyAdmin <em>and</em> SuperAdmin. This follows the "higher role inherits lower role's permissions" pattern.</p>
+      </div>
+
+      <div class="note">
+        <p><strong>CompanyId is nullable.</strong> <code>GetCompanyId()</code> returns <code>int?</code>. SuperAdmin users have <code>null</code> because they exist outside any company. Every controller checks for this: regular endpoints require a non-null CompanyId (return 400 if missing), while SuperAdmin endpoints bypass the check entirely.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="controllers">
+      <h2>Controller isolation</h2>
+      <p>Every API controller follows the same pattern: extract <code>CompanyId</code> from the JWT, filter all queries by it, and validate ownership before mutations. SuperAdmin bypasses the company filter.</p>
+
+      <h3>The pattern</h3>
+      <ol class="trace">
+        <li><div>
+          <b>Extract CompanyId from JWT</b>
+          <p><code>var companyId = User.GetCompanyId();</code></p>
+        </div></li>
+        <li><div>
+          <b>Guard: require CompanyId for regular users</b>
+          <p><code>if (companyId is null) return BadRequest("No company context");</code></p>
+        </div></li>
+        <li><div>
+          <b>Filter queries by CompanyId</b>
+          <p><code>db.MenuItems.Where(m =&gt; m.CompanyId == companyId)</code></p>
+        </div></li>
+        <li><div>
+          <b>Validate ownership on mutations</b>
+          <p><code>if (item.CompanyId != companyId) return Forbid();</code></p>
+        </div></li>
+      </ol>
+
+      <h3>Controller-by-controller breakdown</h3>
+
+      <h4>MenuController</h4>
+      <div class="fn">
+        <header><code>MenuController</code><span class="chip tenant">company-scoped</span></header>
+        <p><span class="k">File</span> <code>server/Controllers/MenuController.cs</code></p>
+<pre><code>// GET: Filter by company (SuperAdmin sees all)
+[HttpGet]
+public async Task&lt;IActionResult&gt; GetAll()
+{
+    var companyId = User.GetCompanyId();
+    var query = db.MenuItems.Where(m =&gt; m.IsActive);
+
+    if (companyId.HasValue)
+        query = query.Where(m =&gt; m.CompanyId == companyId);
+    // SuperAdmin: no filter → sees all companies
+
+    return Ok(await query.ToListAsync());
+}
+
+// POST: Assign to user's company
+[HttpPost]
+public async Task&lt;IActionResult&gt; Create(CreateMenuItemRequest req)
+{
+    var companyId = User.GetCompanyId();
+    if (companyId is null) return BadRequest("No company context");
+
+    var item = new MenuItem {
+        Name = req.Name,
+        CompanyId = companyId.Value  // ← tenant assignment
+    };
+    // ...
+}
+
+// PUT/DELETE: Validate ownership
+[HttpPut("{id}")]
+public async Task&lt;IActionResult&gt; Update(int id, ...)
+{
+    var item = await db.MenuItems.FindAsync(id);
+    if (item?.CompanyId != User.GetCompanyId()) return Forbid();
+    // ...
+}</code></pre>
+      </div>
+
+      <h4>OrderController</h4>
+      <div class="fn">
+        <header><code>OrderController</code><span class="chip tenant">company-scoped</span></header>
+        <p><span class="k">File</span> <code>server/Controllers/OrderController.cs</code></p>
+<pre><code>// POST: Validate stock belongs to user's company
+[HttpPost]
+public async Task&lt;IActionResult&gt; PlaceOrder(PlaceOrderRequest req)
+{
+    var companyId = User.GetCompanyId();
+    if (companyId is null) return BadRequest("No company context");
+
+    var stocks = await db.DailyStocks
+        .Include(s =&gt; s.MenuItem)
+        .Where(s =&gt; s.Date == today
+            &amp;&amp; s.MenuItem.CompanyId == companyId  // ← can't order from another company
+            &amp;&amp; req.Items.Select(i =&gt; i.MenuItemId).Contains(s.MenuItemId))
+        .ToListAsync();
+
+    var order = new Order {
+        UserId = userId,
+        CompanyId = companyId.Value,  // ← stamp the order
+        // ...
+    };
+}
+
+// GET active orders: scoped to company
+[Authorize(Roles = "CompanyAdmin,SuperAdmin")]
+[HttpGet("active")]
+public async Task&lt;IActionResult&gt; ActiveOrders()
+{
+    var companyId = User.GetCompanyId();
+    var query = db.Orders.Where(o =&gt; o.Status != "Delivered");
+
+    if (companyId.HasValue)
+        query = query.Where(o =&gt; o.CompanyId == companyId);
+
+    return Ok(await query.ToListAsync());
+}</code></pre>
+      </div>
+
+      <h4>StockController</h4>
+      <div class="fn">
+        <header><code>StockController</code><span class="chip tenant">company-scoped</span></header>
+        <p><span class="k">File</span> <code>server/Controllers/StockController.cs</code></p>
+<pre><code>// GET today's stock: filter through MenuItem.CompanyId
+[HttpGet("today")]
+public async Task&lt;IActionResult&gt; GetToday()
+{
+    var companyId = User.GetCompanyId();
+    var query = db.DailyStocks
+        .Include(s =&gt; s.MenuItem)
+        .Where(s =&gt; s.Date == today);
+
+    if (companyId.HasValue)
+        query = query.Where(s =&gt; s.MenuItem.CompanyId == companyId);
+
+    return Ok(await query.ToListAsync());
+}
+
+// POST: validate MenuItem belongs to user's company
+[HttpPost]
+public async Task&lt;IActionResult&gt; SetStock(SetStockRequest req)
+{
+    var item = await db.MenuItems.FindAsync(req.MenuItemId);
+    if (item?.CompanyId != User.GetCompanyId()) return Forbid();
+    // ...
+}</code></pre>
+      </div>
+
+      <h4>CompanyController (SuperAdmin only)</h4>
+      <div class="fn">
+        <header><code>CompanyController</code><span class="chip phase">SuperAdmin</span></header>
+        <p><span class="k">File</span> <code>server/Controllers/CompanyController.cs</code></p>
+        <p>The entire controller is restricted to SuperAdmin with <code>[Authorize(Roles = "SuperAdmin")]</code> at the class level.</p>
+<pre><code>[Authorize(Roles = "SuperAdmin")]
+public class CompanyController(CanteenDbContext db) : ControllerBase
+{
+    // List all companies with aggregate stats
+    [HttpGet]
+    public async Task&lt;IActionResult&gt; GetAll()
+    {
+        return Ok(await db.Companies.Select(c =&gt; new {
+            c.Id, c.Name, c.CreatedAt,
+            UserCount = c.Users.Count(),
+            MenuItemCount = c.MenuItems.Count(m =&gt; m.IsActive),
+            TodayOrders = c.Orders.Count(o =&gt; o.CreatedAt.Date == DateTime.UtcNow.Date)
+        }).ToListAsync());
+    }
+
+    // Create company (unique name enforced)
+    [HttpPost]
+    public async Task&lt;IActionResult&gt; Create(CreateCompanyRequest req) { ... }
+
+    // View users of a specific company
+    [HttpGet("{id}/users")]
+    public async Task&lt;IActionResult&gt; GetCompanyUsers(int id) { ... }
+
+    // Promote/demote users (User ↔ CompanyAdmin only)
+    [HttpPut("users/{userId}/role")]
+    public async Task&lt;IActionResult&gt; UpdateUserRole(int userId, UpdateRoleRequest req)
+    {
+        if (req.Role is not ("User" or "CompanyAdmin"))
+            return BadRequest("Role must be User or CompanyAdmin");
+        // Can't create SuperAdmins through the API
+    }
+}</code></pre>
+      </div>
+
+      <div class="note warn">
+        <p><strong>Security boundary.</strong> The <code>UpdateUserRole</code> endpoint only allows setting "User" or "CompanyAdmin". There is no API path to create a SuperAdmin &mdash; this must be done directly in the database. This is a deliberate security choice to prevent privilege escalation through the API.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="ai-scoping">
+      <h2>AI &amp; analytics scoping</h2>
+      <p>Both the AI chat tools and the Text-to-SQL analytics are company-scoped. The tenant boundary extends into the AI layer.</p>
+
+      <h3>Chat tool dispatch</h3>
+      <div class="fn">
+        <header><code>ChatService.DispatchTool</code><span class="chip tenant">scoped tools</span></header>
+        <p><span class="k">File</span> <code>server/Services/ChatService.cs</code></p>
+        <p>The tool dispatch closure captures <code>companyId</code> and passes it to every tool function. Claude can only query or modify data within the user's company.</p>
+<pre><code>// SendMessageStream passes a closure that captures companyId
+await foreach (var evt in claudeApi.SendStreamAsync(
+    message, agentDef,
+    (toolName, input) =&gt; DispatchTool(toolName, input, userId, companyId),
+    history, ct))
+{
+    yield return evt;
+}
+
+// Inside DispatchTool:
+private async Task&lt;string&gt; DispatchTool(
+    string toolName, JsonElement input, int userId, int companyId)
+{
+    // Every tool receives companyId and filters by it
+    return toolName switch {
+        "get_today_menu" =&gt; await GetTodayMenu(scope, companyId),
+        "place_order" =&gt; await PlaceOrder(scope, input, userId, companyId),
+        // ...
+    };
+}
+
+// GetTodayMenu filters by company:
+var stocks = await db.DailyStocks
+    .Where(s =&gt; s.Date == today &amp;&amp; s.MenuItem.CompanyId == companyId)
+    .ToListAsync();</code></pre>
+      </div>
+
+      <h3>Text-to-SQL analytics scoping</h3>
+      <div class="fn">
+        <header><code>AnalyticsService.BuildAgentDef</code><span class="chip phase">prompt injection</span></header>
+        <p><span class="k">File</span> <code>server/Services/AnalyticsService.cs</code></p>
+        <p>The analytics system prompt is dynamically built based on the user's role. For regular users, Claude is instructed to always filter by their CompanyId. For SuperAdmin, Claude has access to all companies.</p>
+<pre><code>private ClaudeAgentDefinition BuildAgentDef(int? companyId)
+{
+    var scope = companyId.HasValue
+        ? $"ALL queries MUST filter by CompanyId={companyId}. " +
+          "Never return data from other companies."
+        : "You have access to all companies. " +
+          "Include CompanyId grouping when relevant.";
+
+    var systemPrompt = $"""
+        You are an analytics assistant for a canteen system.
+        Database schema: {schema}
+
+        DATA ACCESS RULES:
+        {scope}
+        """;
+
+    return new ClaudeAgentDefinition { System = systemPrompt, ... };
+}</code></pre>
+      </div>
+
+      <div class="note">
+        <p><strong>Defence in depth.</strong> The Text-to-SQL analytics uses Claude to generate SQL. The company filter is injected into the system prompt, not enforced at the database level. For a production system, you would also want a query validator that rejects SQL without the required <code>WHERE CompanyId =</code> clause. The current approach relies on Claude following the system prompt instruction.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="frontend">
+      <h2>Frontend</h2>
+      <p>The React frontend adapts its UI based on the user's role and company. The company context is stored in the auth state and used to show relevant navigation and data.</p>
+
+      <h3>Auth context</h3>
+      <div class="fn">
+        <header><code>AuthContext</code><span class="chip">state</span></header>
+        <p><span class="k">File</span> <code>client/src/context/AuthContext.tsx</code></p>
+        <p>The auth state includes <code>companyId</code> and <code>companyName</code>, decoded from the JWT and the login response:</p>
+<pre><code>interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+  role: string;       // "User" | "CompanyAdmin" | "SuperAdmin"
+  companyId?: number;  // undefined for SuperAdmin
+  companyName?: string;
+  token: string;
+}</code></pre>
+      </div>
+
+      <h3>Conditional UI elements</h3>
+      <div class="fn">
+        <header><code>TodayMenuPage</code><span class="chip">adaptive UI</span></header>
+        <p><span class="k">File</span> <code>client/src/pages/TodayMenuPage.tsx</code></p>
+        <p>The main page adapts based on role:</p>
+<pre><code>// Show company name in subtitle
+&lt;p&gt;Welcome, {user?.name}
+  {user?.companyName &amp;&amp;
+    &lt;span style={{ color: "#0f766e" }}&gt; &amp;mdash; {user.companyName}&lt;/span&gt;}
+&lt;/p&gt;
+
+// SuperAdmin-only button
+{user?.role === "SuperAdmin" &amp;&amp; (
+  &lt;button onClick={() =&gt; navigate("/admin/companies")}&gt;Companies&lt;/button&gt;
+)}
+
+// CompanyAdmin and SuperAdmin buttons
+{(user?.role === "CompanyAdmin" || user?.role === "SuperAdmin") &amp;&amp; (
+  &lt;&gt;
+    &lt;button&gt;Manage Menu&lt;/button&gt;
+    &lt;button&gt;Set Stock&lt;/button&gt;
+    &lt;button&gt;Orders&lt;/button&gt;
+    &lt;button&gt;Analytics&lt;/button&gt;
+  &lt;/&gt;
+)}</code></pre>
+      </div>
+
+      <h3>Registration with company selection</h3>
+      <div class="fn">
+        <header><code>LoginPage</code><span class="chip">registration</span></header>
+        <p><span class="k">File</span> <code>client/src/pages/LoginPage.tsx</code></p>
+        <p>New users select their company during registration. The company list is fetched from a public endpoint:</p>
+<pre><code>// Fetch available companies on mount
+useEffect(() =&gt; {
+  fetch("http://localhost:5230/api/auth/companies")
+    .then(r =&gt; r.json())
+    .then(setCompanies);
+}, []);
+
+// Company dropdown in registration form
+&lt;select value={company} onChange={e =&gt; setCompany(e.target.value)}&gt;
+  &lt;option value=""&gt;Select company&lt;/option&gt;
+  {companies.map(c =&gt;
+    &lt;option key={c.id} value={c.id}&gt;{c.name}&lt;/option&gt;
+  )}
+&lt;/select&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="superadmin">
+      <h2>SuperAdmin dashboard</h2>
+      <p>The SuperAdmin dashboard (<code>/admin/companies</code>) provides cross-company management. It is the only page that shows data from all companies simultaneously.</p>
+
+      <div class="fn">
+        <header><code>SuperAdminPage</code><span class="chip phase">SuperAdmin</span></header>
+        <p><span class="k">File</span> <code>client/src/pages/SuperAdminPage.tsx</code></p>
+      </div>
+
+      <h3>Features</h3>
+      <div class="cols">
+        <div>
+          <h3>Company cards</h3>
+          <p>Each company displays as a card with live aggregate statistics:</p>
+          <ul>
+            <li><strong>User count</strong> &mdash; total registered users</li>
+            <li><strong>Menu items</strong> &mdash; active items only</li>
+            <li><strong>Today's orders</strong> &mdash; orders placed today</li>
+          </ul>
+        </div>
+        <div>
+          <h3>User management</h3>
+          <p>Click "View Users" on any company card to see its users. Each user has a toggle button to promote/demote between User and CompanyAdmin. SuperAdmin role cannot be assigned through the UI.</p>
+        </div>
+        <div>
+          <h3>Create company</h3>
+          <p>A simple form at the top creates new companies. Company names must be unique (enforced by both the database unique index and an API-level check).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="seed">
+      <h2>Seed data</h2>
+      <p>The database seeds with two companies, five users across three roles, and ten menu items (five per company) for immediate testing.</p>
+
+      <h3>Companies</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>ID</th><th>Name</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>TechCorp</td></tr>
+          <tr><td>2</td><td>DesignStudio</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Users</h3>
+      <div class="scroll"><table>
+        <thead><tr><th>Email</th><th>Password</th><th>Role</th><th>Company</th></tr></thead>
+        <tbody>
+          <tr><td><code>super@admin.com</code></td><td><code>super123</code></td><td><span class="chip tenant">SuperAdmin</span></td><td><em>none</em></td></tr>
+          <tr><td><code>admin@techcorp.com</code></td><td><code>admin123</code></td><td><span class="chip">CompanyAdmin</span></td><td>TechCorp</td></tr>
+          <tr><td><code>user@techcorp.com</code></td><td><code>user123</code></td><td><span class="chip plain">User</span></td><td>TechCorp</td></tr>
+          <tr><td><code>admin@designstudio.com</code></td><td><code>admin123</code></td><td><span class="chip">CompanyAdmin</span></td><td>DesignStudio</td></tr>
+          <tr><td><code>user@designstudio.com</code></td><td><code>user123</code></td><td><span class="chip plain">User</span></td><td>DesignStudio</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Menu items per company</h3>
+      <div class="cols">
+        <div>
+          <h3>TechCorp <span class="chip plain">id=1</span></h3>
+          <ul>
+            <li>Masala Chai &mdash; &#x20B9;20</li>
+            <li>Samosa &mdash; &#x20B9;15</li>
+            <li>Veg Thali &mdash; &#x20B9;80</li>
+            <li>Cold Coffee &mdash; &#x20B9;40</li>
+            <li>Paneer Tikka &mdash; &#x20B9;60</li>
+          </ul>
+        </div>
+        <div>
+          <h3>DesignStudio <span class="chip plain">id=2</span></h3>
+          <ul>
+            <li>Green Tea &mdash; &#x20B9;25</li>
+            <li>Pasta &mdash; &#x20B9;90</li>
+            <li>Caesar Salad &mdash; &#x20B9;70</li>
+            <li>Latte &mdash; &#x20B9;50</li>
+            <li>Bruschetta &mdash; &#x20B9;55</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><strong>Testing isolation.</strong> The two companies have completely different menus. Log in as <code>user@techcorp.com</code> and you see Indian food (Masala Chai, Samosa, etc.). Log in as <code>user@designstudio.com</code> and you see Western food (Pasta, Caesar Salad, etc.). This makes it immediately obvious whether tenant isolation is working.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="files">
+      <h2>Files</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>File</th><th>Role</th><th>Scope</th></tr></thead>
+        <tbody>
+          <tr><td><code>server/Models/Company.cs</code></td><td>Company entity &mdash; the tenant root</td><td><span class="chip tenant">model</span></td></tr>
+          <tr><td><code>server/Models/User.cs</code></td><td>User with optional <code>CompanyId</code></td><td><span class="chip tenant">model</span></td></tr>
+          <tr><td><code>server/Models/MenuItem.cs</code></td><td>MenuItem with required <code>CompanyId</code></td><td><span class="chip tenant">model</span></td></tr>
+          <tr><td><code>server/Models/Order.cs</code></td><td>Order with required <code>CompanyId</code></td><td><span class="chip tenant">model</span></td></tr>
+          <tr><td><code>server/Data/CanteenDbContext.cs</code></td><td>EF Core config, FK constraints, seed data</td><td><span class="chip plain">data</span></td></tr>
+          <tr><td><code>server/Extensions/ClaimsPrincipalExtensions.cs</code></td><td><code>GetCompanyId()</code>, <code>IsSuperAdmin()</code>, etc.</td><td><span class="chip">auth</span></td></tr>
+          <tr><td><code>server/Services/AuthService.cs</code></td><td>JWT generation with CompanyId claim</td><td><span class="chip">auth</span></td></tr>
+          <tr><td><code>server/Controllers/MenuController.cs</code></td><td>Company-filtered menu CRUD</td><td><span class="chip tenant">API</span></td></tr>
+          <tr><td><code>server/Controllers/OrderController.cs</code></td><td>Company-filtered orders</td><td><span class="chip tenant">API</span></td></tr>
+          <tr><td><code>server/Controllers/StockController.cs</code></td><td>Company-filtered stock management</td><td><span class="chip tenant">API</span></td></tr>
+          <tr><td><code>server/Controllers/CompanyController.cs</code></td><td>SuperAdmin-only company management</td><td><span class="chip phase">SuperAdmin</span></td></tr>
+          <tr><td><code>server/Services/ChatService.cs</code></td><td>AI chat with company-scoped tool dispatch</td><td><span class="chip tenant">AI</span></td></tr>
+          <tr><td><code>server/Services/AnalyticsService.cs</code></td><td>Text-to-SQL with company filter in system prompt</td><td><span class="chip tenant">AI</span></td></tr>
+          <tr><td><code>client/src/context/AuthContext.tsx</code></td><td>Auth state with companyId/companyName</td><td><span class="chip">frontend</span></td></tr>
+          <tr><td><code>client/src/App.tsx</code></td><td>Route guards: ProtectedRoute, AdminRoute, SuperAdminRoute</td><td><span class="chip">frontend</span></td></tr>
+          <tr><td><code>client/src/pages/LoginPage.tsx</code></td><td>Registration with company selection dropdown</td><td><span class="chip">frontend</span></td></tr>
+          <tr><td><code>client/src/pages/TodayMenuPage.tsx</code></td><td>Role-adaptive main page</td><td><span class="chip">frontend</span></td></tr>
+          <tr><td><code>client/src/pages/SuperAdminPage.tsx</code></td><td>Cross-company management dashboard</td><td><span class="chip phase">SuperAdmin</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer>
+      <p>Canteen Connect &mdash; Multi-Tenant Architecture documentation. Part of the <a href="login-flow.html">login</a> &rarr; <a href="menu-management.html">menu</a> &rarr; <a href="ordering-flow.html">ordering</a> &rarr; <a href="ai-chat-flow.html">AI chat</a> &rarr; <a href="sse-streaming.html">SSE streaming</a> &rarr; <strong>multi-tenant</strong> doc series.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

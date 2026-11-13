@@ -173,6 +173,10 @@
       <p class="lede">From the sign-in page to the home screen: every endpoint, every component, what each one does and how it does it. Built with .NET 10, React, and SQLite.</p>
     </header>
 
+    <div class="note" style="margin-top:24px;">
+      <p><strong>Updated in <a href="multi-tenant.html">Phase 09 &mdash; Multi-Tenant</a>.</strong> This doc describes the original two-role system (Admin / Employee). The auth flow now includes three roles (User, CompanyAdmin, SuperAdmin), a <code>CompanyId</code> JWT claim, and a company selection dropdown on registration. See the <a href="multi-tenant.html">multi-tenant architecture</a> doc for the current state.</p>
+    </div>
+
     <section id="overview">
       <h2>Overview</h2>
       <p>Login uses an email and a password stored in SQLite. The .NET API checks them and hands back a <strong>JSON Web Token (JWT)</strong>: a signed note that says "this is user X with role Y". The browser keeps the token and attaches it to every later request. The server never keeps a session in memory; it verifies the signature on each request through ASP.NET's <code>JwtBearer</code> middleware.</p>

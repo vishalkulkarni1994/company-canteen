@@ -201,6 +201,34 @@
         </div>
       </div>
     </a>
+
+    <a class="phase" href="sse-streaming.html">
+      <div class="phase-num">08</div>
+      <div>
+        <h3>SSE streaming</h3>
+        <p>Real-time token-by-token streaming from Claude through the .NET backend to the React frontend using Server-Sent Events. Text deltas, tool-start, and tool-done events stream as they happen &mdash; with the agentic loop running between streaming rounds.</p>
+        <div class="meta">
+          <span class="chip">IAsyncEnumerable</span>
+          <span class="chip">AsyncGenerator</span>
+          <span class="chip">text/event-stream</span>
+          <span class="chip plain">4-layer architecture</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="phase" href="multi-tenant.html">
+      <div class="phase-num">09</div>
+      <div>
+        <h3>Multi-tenant architecture</h3>
+        <p>Company-scoped data isolation with three roles (User, CompanyAdmin, SuperAdmin). Every entity carries a CompanyId, every query filters by it, and a SuperAdmin dashboard manages all companies.</p>
+        <div class="meta">
+          <span class="chip">CompanyId on JWT</span>
+          <span class="chip">3 roles</span>
+          <span class="chip">Company-scoped AI</span>
+          <span class="chip plain">Shared database</span>
+        </div>
+      </div>
+    </a>
   </div>
 
   <section>
@@ -228,7 +256,7 @@
       </div>
       <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;">
         <strong style="display:block;margin-bottom:4px;">Auth</strong>
-        <span style="font-size:14px;color:var(--muted);">JWT Bearer &middot; BCrypt &middot; Role-based (Admin/Employee)</span>
+        <span style="font-size:14px;color:var(--muted);">JWT Bearer &middot; BCrypt &middot; Role-based (User/CompanyAdmin/SuperAdmin)</span>
       </div>
     </div>
   </section>

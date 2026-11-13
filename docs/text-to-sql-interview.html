@@ -154,6 +154,10 @@
       <p class="lede">An interview guide explaining the Text-to-SQL pattern &mdash; where Claude generates a SQL query from natural language instead of calling predefined tools. Covers when to use it instead of tool calling, the architecture, annotated code walkthrough, security layers, and 12+ interview Q&amp;A.</p>
     </header>
 
+    <div class="note" style="margin-top:24px;">
+      <p><strong>Updated in <a href="multi-tenant.html">Phase 09 &mdash; Multi-Tenant</a>.</strong> The analytics system prompt now dynamically injects a <code>CompanyId</code> filter &mdash; regular users can only query their own company's data, while SuperAdmin has cross-company access. See the <a href="multi-tenant.html#ai-scoping">AI &amp; analytics scoping</a> section.</p>
+    </div>
+
     <!-- ================================================================ -->
     <section id="what-is-it">
       <h2>What is Text-to-SQL?</h2>

@@ -175,6 +175,10 @@
       <p class="lede">Phase-by-phase guide to adding menu items, daily stock control, and the pages that let admins manage them and employees browse today's food. Every entity, every endpoint, every component.</p>
     </header>
 
+    <div class="note" style="margin-top:24px;">
+      <p><strong>Updated in <a href="multi-tenant.html">Phase 09 &mdash; Multi-Tenant</a>.</strong> Menu items and daily stock are now scoped by <code>CompanyId</code>. Every query filters by the authenticated user's company, and SuperAdmin can see all companies. See the <a href="multi-tenant.html">multi-tenant architecture</a> doc for details.</p>
+    </div>
+
     <!-- ================================================================ -->
     <section id="overview">
       <h2>Overview</h2>

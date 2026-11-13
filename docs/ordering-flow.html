@@ -175,6 +175,10 @@
       <p class="lede">From browsing today's menu to getting a toast when your food is ready: cart management, order placement with atomic stock decrement, a kitchen kanban for admins, and polling-based notifications. Every entity, every endpoint, every component.</p>
     </header>
 
+    <div class="note" style="margin-top:24px;">
+      <p><strong>Updated in <a href="multi-tenant.html">Phase 09 &mdash; Multi-Tenant</a>.</strong> Orders now carry a <code>CompanyId</code>. Stock validation checks that menu items belong to the user's company, and the kitchen kanban is scoped per company. See the <a href="multi-tenant.html">multi-tenant architecture</a> doc for details.</p>
+    </div>
+
     <!-- ================================================================ -->
     <section id="overview">
       <h2>Overview</h2>
