@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -77,6 +78,171 @@ public class HttpClaudeClient(
         // ── Step 5: Parse JSON response into our DTOs ──
         var root = JsonDocument.Parse(responseBody).RootElement;
         return MapResponse(root);
+    }
+
+    public async IAsyncEnumerable<ClaudeStreamEvent> SendStreamAsync(
+        ClaudeAgentDefinition agentDef,
+        List<object> messages,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var apiKey = config["Claude:ApiKey"]
+            ?? throw new InvalidOperationException("Claude API key is not configured.");
+
+        var httpClient = httpFactory.CreateClient();
+        httpClient.DefaultRequestHeaders.Add("x-api-key", apiKey);
+        httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+
+        var body = new
+        {
+            model = agentDef.Model,
+            max_tokens = agentDef.MaxTokens,
+            system = agentDef.SystemPrompt,
+            tools = agentDef.Tools,
+            messages,
+            stream = true
+        };
+
+        var json = JsonSerializer.Serialize(body, JsonOpts);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var request = new HttpRequestMessage(HttpMethod.Post,
+            "https://api.anthropic.com/v1/messages") { Content = content };
+
+        using var resp = await httpClient.SendAsync(request,
+            HttpCompletionOption.ResponseHeadersRead, ct);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            var errorBody = await resp.Content.ReadAsStringAsync(ct);
+            logger.LogError("[HttpClient] StreamError. Status={S} Body={B}",
+                (int)resp.StatusCode, errorBody);
+            throw new Exception($"Claude API error: {resp.StatusCode} - {errorBody}");
+        }
+
+        using var stream = await resp.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream);
+
+        var blocks = new List<ContentBlock>();
+        var currentBlockType = "";
+        var currentBlockId = "";
+        var currentBlockName = "";
+        var textAccumulator = new StringBuilder();
+        var inputJsonAccumulator = new StringBuilder();
+        string stopReason = "end_turn";
+        long inputTokens = 0, outputTokens = 0;
+
+        while (!reader.EndOfStream)
+        {
+            ct.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync(ct);
+            if (line == null) break;
+            if (!line.StartsWith("data: ")) continue;
+
+            var data = line["data: ".Length..];
+            if (data == "[DONE]") break;
+
+            JsonElement evt;
+            try { evt = JsonDocument.Parse(data).RootElement; }
+            catch { continue; }
+
+            var evtType = evt.TryGetProperty("type", out var t) ? t.GetString() : null;
+
+            switch (evtType)
+            {
+                case "content_block_start":
+                    var cb = evt.GetProperty("content_block");
+                    currentBlockType = cb.GetProperty("type").GetString()!;
+                    if (currentBlockType == "tool_use")
+                    {
+                        currentBlockId = cb.GetProperty("id").GetString()!;
+                        currentBlockName = cb.GetProperty("name").GetString()!;
+                        inputJsonAccumulator.Clear();
+                        yield return new ClaudeStreamEvent
+                        {
+                            Type = StreamEventType.ToolStart,
+                            ToolName = currentBlockName
+                        };
+                    }
+                    else
+                    {
+                        textAccumulator.Clear();
+                    }
+                    break;
+
+                case "content_block_delta":
+                    var delta = evt.GetProperty("delta");
+                    var deltaType = delta.GetProperty("type").GetString();
+                    if (deltaType == "text_delta")
+                    {
+                        var chunk = delta.GetProperty("text").GetString()!;
+                        textAccumulator.Append(chunk);
+                        yield return new ClaudeStreamEvent
+                        {
+                            Type = StreamEventType.TextDelta,
+                            Text = chunk
+                        };
+                    }
+                    else if (deltaType == "input_json_delta")
+                    {
+                        var partial = delta.GetProperty("partial_json").GetString()!;
+                        inputJsonAccumulator.Append(partial);
+                    }
+                    break;
+
+                case "content_block_stop":
+                    if (currentBlockType == "text")
+                    {
+                        blocks.Add(new ContentBlock
+                        {
+                            Type = "text",
+                            Text = textAccumulator.ToString()
+                        });
+                    }
+                    else if (currentBlockType == "tool_use")
+                    {
+                        var inputJson = inputJsonAccumulator.ToString();
+                        var inputElement = string.IsNullOrEmpty(inputJson)
+                            ? JsonDocument.Parse("{}").RootElement
+                            : JsonDocument.Parse(inputJson).RootElement;
+                        blocks.Add(new ContentBlock
+                        {
+                            Type = "tool_use",
+                            Id = currentBlockId,
+                            Name = currentBlockName,
+                            Input = inputElement
+                        });
+                    }
+                    break;
+
+                case "message_delta":
+                    if (evt.TryGetProperty("delta", out var md)
+                        && md.TryGetProperty("stop_reason", out var sr))
+                        stopReason = sr.GetString() ?? "end_turn";
+                    if (evt.TryGetProperty("usage", out var u)
+                        && u.TryGetProperty("output_tokens", out var ot))
+                        outputTokens = ot.GetInt64();
+                    break;
+
+                case "message_start":
+                    if (evt.TryGetProperty("message", out var msg)
+                        && msg.TryGetProperty("usage", out var mu)
+                        && mu.TryGetProperty("input_tokens", out var it))
+                        inputTokens = it.GetInt64();
+                    break;
+            }
+        }
+
+        yield return new ClaudeStreamEvent
+        {
+            Type = StreamEventType.RoundComplete,
+            Response = new ClaudeResponse
+            {
+                StopReason = stopReason,
+                Content = blocks,
+                InputTokens = inputTokens,
+                OutputTokens = outputTokens
+            }
+        };
     }
 
     /// <summary>

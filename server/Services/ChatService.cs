@@ -28,14 +28,14 @@ public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeF
         Tools = BuildToolDefinitions()
     };
 
-    public async Task<string> SendMessage(string userMessage, int userId, List<ChatMessage>? history)
+    public async Task<string> SendMessage(string userMessage, int userId, int companyId, List<ChatMessage>? history)
     {
         try
         {
             return await claudeApi.SendAsync(
                 userMessage,
                 AgentDef,
-                dispatchTool: (toolName, input) => DispatchTool(toolName, input, userId),
+                dispatchTool: (toolName, input) => DispatchTool(toolName, input, userId, companyId),
                 history,
                 CancellationToken.None);
         }
@@ -50,25 +50,37 @@ public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeF
         }
     }
 
-    private async Task<string> DispatchTool(string toolName, JsonElement input, int userId)
+    public IAsyncEnumerable<ClaudeStreamEvent> SendMessageStream(
+        string userMessage, int userId, int companyId, List<ChatMessage>? history,
+        CancellationToken ct = default)
+    {
+        return claudeApi.SendStreamAsync(
+            userMessage,
+            AgentDef,
+            dispatchTool: (toolName, input) => DispatchTool(toolName, input, userId, companyId),
+            history,
+            ct);
+    }
+
+    private async Task<string> DispatchTool(string toolName, JsonElement input, int userId, int companyId)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CanteenDbContext>();
 
         return toolName switch
         {
-            "get_today_menu" => await GetTodayMenu(db),
-            "place_order" => await PlaceOrder(db, input, userId),
+            "get_today_menu" => await GetTodayMenu(db, companyId),
+            "place_order" => await PlaceOrder(db, input, userId, companyId),
             var unknown => throw new NotSupportedException($"Unknown tool '{unknown}'.")
         };
     }
 
-    private static async Task<string> GetTodayMenu(CanteenDbContext db)
+    private static async Task<string> GetTodayMenu(CanteenDbContext db, int companyId)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var items = await db.DailyStocks
             .Include(s => s.MenuItem)
-            .Where(s => s.Date == today && s.MenuItem.IsActive)
+            .Where(s => s.Date == today && s.MenuItem.IsActive && s.MenuItem.CompanyId == companyId)
             .OrderBy(s => s.MenuItem.Category).ThenBy(s => s.MenuItem.Name)
             .Select(s => new
             {
@@ -87,14 +99,14 @@ public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeF
         return JsonSerializer.Serialize(items, JsonOpts);
     }
 
-    private static async Task<string> PlaceOrder(CanteenDbContext db, JsonElement input, int userId)
+    private static async Task<string> PlaceOrder(CanteenDbContext db, JsonElement input, int userId, int companyId)
     {
         var items = input.GetProperty("items").EnumerateArray().ToList();
         if (items.Count == 0)
             return JsonSerializer.Serialize(new { error = "No items specified." });
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var order = new Order { Status = "Placed", TotalAmount = 0, UserId = userId };
+        var order = new Order { Status = "Placed", TotalAmount = 0, UserId = userId, CompanyId = companyId };
 
         foreach (var line in items)
         {
@@ -108,7 +120,8 @@ public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeF
                 .Include(s => s.MenuItem)
                 .FirstOrDefaultAsync(s => s.MenuItemId == menuItemId
                                          && s.Date == today
-                                         && s.MenuItem.IsActive);
+                                         && s.MenuItem.IsActive
+                                         && s.MenuItem.CompanyId == companyId);
 
             if (stock is null)
                 return JsonSerializer.Serialize(new { error = $"Item {menuItemId} is not available today." });

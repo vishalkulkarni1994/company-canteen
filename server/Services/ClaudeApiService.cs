@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace CanteenApi.Services;
@@ -132,6 +133,77 @@ public class ClaudeApiService(IClaudeMessageClient client, ILogger<ClaudeApiServ
             agentDef.Model, totalInput, totalOutput, sw.ElapsedMilliseconds);
 
         return result;
+    }
+
+    /// <summary>
+    /// Streaming version of the agentic loop. Yields text deltas and tool status
+    /// events as they happen, executing tools between rounds.
+    /// </summary>
+    public async IAsyncEnumerable<ClaudeStreamEvent> SendStreamAsync(
+        string query,
+        ClaudeAgentDefinition agentDef,
+        Func<string, JsonElement, Task<string>> dispatchTool,
+        List<ChatMessage>? history = null,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var messages = new List<object>();
+        if (history != null)
+            foreach (var msg in history)
+                messages.Add(new { role = msg.Role, content = msg.Content });
+        messages.Add(new { role = "user", content = query });
+
+        for (var round = 0; round < MaxToolRounds; round++)
+        {
+            ClaudeResponse? roundResponse = null;
+
+            await foreach (var evt in client.SendStreamAsync(agentDef, messages, ct))
+            {
+                if (evt.Type == StreamEventType.RoundComplete)
+                    roundResponse = evt.Response;
+                else
+                    yield return evt;
+            }
+
+            if (roundResponse == null) break;
+
+            if (roundResponse.StopReason != "tool_use")
+                break;
+
+            // Add Claude's response to conversation
+            messages.Add(new
+            {
+                role = "assistant",
+                content = roundResponse.Content.Select(b => b.Type == "text"
+                    ? (object)new { type = "text", text = b.Text }
+                    : new { type = "tool_use", id = b.Id, name = b.Name, input = b.Input }
+                ).ToArray()
+            });
+
+            // Execute tools and emit status events
+            var toolResults = new List<object>();
+            foreach (var block in roundResponse.Content.Where(b => b.Type == "tool_use"))
+            {
+                logger.LogInformation("[AgentLoop] ToolCall. Tool={Tool} Round={Round}",
+                    block.Name, round);
+
+                var toolResult = await dispatchTool(block.Name!, block.Input);
+
+                yield return new ClaudeStreamEvent
+                {
+                    Type = StreamEventType.ToolDone,
+                    ToolName = block.Name
+                };
+
+                toolResults.Add(new
+                {
+                    type = "tool_result",
+                    tool_use_id = block.Id,
+                    content = toolResult
+                });
+            }
+
+            messages.Add(new { role = "user", content = toolResults.ToArray() });
+        }
     }
 }
 

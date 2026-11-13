@@ -20,10 +20,19 @@ namespace CanteenApi.Services;
 public interface IClaudeMessageClient
 {
     /// <summary>
-    /// Make one API call to Claude's /v1/messages endpoint.
+    /// Make one API call to Claude's /v1/messages endpoint (non-streaming).
     /// The agentic loop calls this once per round.
     /// </summary>
     Task<ClaudeResponse> SendAsync(
+        ClaudeAgentDefinition agentDef,
+        List<object> messages,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Make one streaming API call. Yields SSE events as they arrive,
+    /// then yields a final ClaudeStreamEvent with the complete ClaudeResponse.
+    /// </summary>
+    IAsyncEnumerable<ClaudeStreamEvent> SendStreamAsync(
         ClaudeAgentDefinition agentDef,
         List<object> messages,
         CancellationToken ct = default);
@@ -58,4 +67,29 @@ public class ContentBlock
 
     /// <summary>Tool input arguments as JSON (only when Type == "tool_use")</summary>
     public JsonElement Input { get; init; }
+}
+
+// ── Streaming event types ────────────────────────────────────────────────
+// These flow from Claude's SSE stream through the agentic loop to the client.
+
+public enum StreamEventType
+{
+    TextDelta,
+    ToolStart,
+    ToolDone,
+    RoundComplete
+}
+
+public class ClaudeStreamEvent
+{
+    public required StreamEventType Type { get; init; }
+
+    /// <summary>Text chunk (only for TextDelta)</summary>
+    public string? Text { get; init; }
+
+    /// <summary>Tool name (only for ToolStart)</summary>
+    public string? ToolName { get; init; }
+
+    /// <summary>The complete response for this round (only for RoundComplete)</summary>
+    public ClaudeResponse? Response { get; init; }
 }

@@ -164,4 +164,13 @@ public class SdkClaudeClient(
             "Run: dotnet add package Anthropic.SDK " +
             "then uncomment the SDK implementation in SdkClaudeClient.cs");
     }
+
+    public IAsyncEnumerable<ClaudeStreamEvent> SendStreamAsync(
+        ClaudeAgentDefinition agentDef,
+        List<object> messages,
+        CancellationToken ct = default)
+    {
+        throw new InvalidOperationException(
+            "SDK mode is enabled but Anthropic.SDK is not installed.");
+    }
 }
