@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CanteenApi.Data;
 using CanteenApi.Models;
+using CanteenApi.Extensions;
 
 namespace CanteenApi.Controllers;
 
@@ -14,7 +15,15 @@ public class MenuController(CanteenDbContext db) : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetAll([FromQuery] string? category)
     {
+        var companyId = User.GetCompanyId();
+        if (companyId is null && !User.IsSuperAdmin())
+            return Forbid();
+
         var query = db.MenuItems.Where(m => m.IsActive);
+
+        if (!User.IsSuperAdmin())
+            query = query.Where(m => m.CompanyId == companyId);
+
         if (!string.IsNullOrEmpty(category))
             query = query.Where(m => m.Category == category);
 
@@ -36,6 +45,9 @@ public class MenuController(CanteenDbContext db) : ControllerBase
         var item = await db.MenuItems.FindAsync(id);
         if (item is null || !item.IsActive) return NotFound();
 
+        if (!User.IsSuperAdmin() && item.CompanyId != User.GetCompanyId())
+            return Forbid();
+
         return Ok(new MenuItemResponse(
             item.Id, item.Name, item.Description, item.Price,
             item.Category, item.ImageUrl, item.IsActive,
@@ -43,16 +55,21 @@ public class MenuController(CanteenDbContext db) : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "CompanyAdmin,SuperAdmin")]
     public async Task<IActionResult> Create([FromBody] CreateMenuItemRequest req)
     {
+        var companyId = User.GetCompanyId();
+        if (companyId is null)
+            return BadRequest(new { message = "SuperAdmin must act through a company context" });
+
         var item = new MenuItem
         {
             Name = req.Name,
             Description = req.Description,
             Price = req.Price,
             Category = req.Category,
-            ImageUrl = req.ImageUrl
+            ImageUrl = req.ImageUrl,
+            CompanyId = companyId.Value
         };
         db.MenuItems.Add(item);
         await db.SaveChangesAsync();
@@ -66,11 +83,14 @@ public class MenuController(CanteenDbContext db) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "CompanyAdmin,SuperAdmin")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateMenuItemRequest req)
     {
         var item = await db.MenuItems.FindAsync(id);
         if (item is null) return NotFound();
+
+        if (!User.IsSuperAdmin() && item.CompanyId != User.GetCompanyId())
+            return Forbid();
 
         if (req.Name is not null) item.Name = req.Name;
         if (req.Description is not null) item.Description = req.Description;
@@ -88,11 +108,14 @@ public class MenuController(CanteenDbContext db) : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "CompanyAdmin,SuperAdmin")]
     public async Task<IActionResult> Delete(int id)
     {
         var item = await db.MenuItems.FindAsync(id);
         if (item is null) return NotFound();
+
+        if (!User.IsSuperAdmin() && item.CompanyId != User.GetCompanyId())
+            return Forbid();
 
         item.IsActive = false;
         item.UpdatedAt = DateTime.UtcNow;

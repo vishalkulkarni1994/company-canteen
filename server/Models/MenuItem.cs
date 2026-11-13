@@ -9,6 +9,8 @@ public class MenuItem
     public required string Category { get; set; }
     public string? ImageUrl { get; set; }
     public bool IsActive { get; set; } = true;
+    public int CompanyId { get; set; }
+    public Company Company { get; set; } = null!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<DailyStock> DailyStocks { get; set; } = [];

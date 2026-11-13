@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { login, register } from "../api/auth";
+import { login, register, getCompanies, type CompanyOption } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
@@ -8,10 +8,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [companyId, setCompanyId] = useState<number>(0);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    getCompanies()
+      .then((list) => {
+        setCompanies(list);
+        if (list.length > 0) setCompanyId(list[0].id);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -19,7 +30,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = isRegister
-        ? await register(email, password, name)
+        ? await register(email, password, name, companyId)
         : await login(email, password);
       setAuth(res);
       navigate("/");
@@ -41,14 +52,27 @@ export default function LoginPage() {
         {error && <p style={{ color: "red", fontSize: 14 }}>{error}</p>}
 
         {isRegister && (
-          <input
-            type="text"
-            placeholder="Full name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            style={inputStyle}
-          />
+          <>
+            <input
+              type="text"
+              placeholder="Full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              style={inputStyle}
+            />
+            <select
+              value={companyId}
+              onChange={(e) => setCompanyId(Number(e.target.value))}
+              required
+              style={inputStyle}
+            >
+              <option value={0} disabled>Select your company</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </>
         )}
         <input
           type="email"

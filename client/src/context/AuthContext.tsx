@@ -6,6 +6,8 @@ interface AuthState {
   email: string;
   name: string;
   role: string;
+  companyId: number | null;
+  companyName: string | null;
 }
 
 interface AuthContextType {
@@ -27,7 +29,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   function setAuth(res: AuthResponse) {
-    const state: AuthState = { token: res.token, email: res.email, name: res.name, role: res.role };
+    const state: AuthState = {
+      token: res.token,
+      email: res.email,
+      name: res.name,
+      role: res.role,
+      companyId: res.companyId,
+      companyName: res.companyName,
+    };
     localStorage.setItem("auth", JSON.stringify(state));
     setUser(state);
   }

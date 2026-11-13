@@ -13,13 +13,16 @@ public class AuthService(IConfiguration config)
         var key = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(config["Jwt:Key"]!));
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Name, user.Name),
-            new Claim(ClaimTypes.Role, user.Role)
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Name, user.Name),
+            new(ClaimTypes.Role, user.Role)
         };
+
+        if (user.CompanyId.HasValue)
+            claims.Add(new Claim("CompanyId", user.CompanyId.Value.ToString()));
 
         var token = new JwtSecurityToken(
             issuer: config["Jwt:Issuer"],

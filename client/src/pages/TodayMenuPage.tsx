@@ -105,10 +105,18 @@ export default function TodayMenuPage() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Today's Menu</h1>
-          <p style={styles.subtitle}>Welcome, {user?.name}</p>
+          <p style={styles.subtitle}>
+            Welcome, {user?.name}
+            {user?.companyName && <span style={{ color: "#0f766e", fontWeight: 600 }}> — {user.companyName}</span>}
+          </p>
         </div>
         <div style={styles.headerActions}>
-          {user?.role === "Admin" && (
+          {user?.role === "SuperAdmin" && (
+            <button onClick={() => navigate("/admin/companies")} style={styles.navBtn}>
+              Companies
+            </button>
+          )}
+          {(user?.role === "CompanyAdmin" || user?.role === "SuperAdmin") && (
             <>
               <button onClick={() => navigate("/admin/menu")} style={styles.navBtn}>
                 Manage Menu
@@ -124,6 +132,9 @@ export default function TodayMenuPage() {
               </button>
             </>
           )}
+          <button onClick={() => navigate("/chat")} style={styles.navBtn}>
+            AI Chat
+          </button>
           <button onClick={() => navigate("/orders")} style={styles.navBtn}>
             My Orders
           </button>
@@ -225,7 +236,7 @@ export default function TodayMenuPage() {
         <div style={styles.emptyState}>
           <p style={styles.emptyTitle}>No items available today</p>
           <p style={styles.emptyDesc}>
-            {user?.role === "Admin"
+            {user?.role === "CompanyAdmin" || user?.role === "SuperAdmin"
               ? "Set today's stock from the Stock page."
               : "Check back later or contact the kitchen."}
           </p>

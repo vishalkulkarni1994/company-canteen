@@ -7,6 +7,8 @@ import StockPage from "./pages/StockPage";
 import OrdersPage from "./pages/OrdersPage";
 import KitchenPage from "./pages/KitchenPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import ChatPage from "./pages/ChatPage";
+import SuperAdminPage from "./pages/SuperAdminPage";
 import ToastContainer from "./components/Toast";
 import useOrderNotifications from "./hooks/useOrderNotifications";
 
@@ -23,7 +25,14 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== "Admin") return <Navigate to="/" replace />;
+  if (user.role !== "CompanyAdmin" && user.role !== "SuperAdmin") return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "SuperAdmin") return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -43,6 +52,8 @@ function AppShell() {
           <Route path="/admin/stock" element={<AdminRoute><StockPage /></AdminRoute>} />
           <Route path="/admin/orders" element={<AdminRoute><KitchenPage /></AdminRoute>} />
           <Route path="/admin/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
+          <Route path="/admin/companies" element={<SuperAdminRoute><SuperAdminPage /></SuperAdminRoute>} />
+          <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </>

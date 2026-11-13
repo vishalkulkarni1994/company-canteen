@@ -10,18 +10,20 @@ public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory 
     private const string DbSchema = """
         Tables:
 
-        Users (Id INT PK, Email TEXT, Name TEXT, Role TEXT, CreatedAt DATETIME)
+        Companies (Id INT PK, Name TEXT, CreatedAt DATETIME)
 
-        MenuItems (Id INT PK, Name TEXT, Description TEXT, Price DECIMAL, Category TEXT, ImageUrl TEXT, IsActive BOOL, CreatedAt DATETIME, UpdatedAt DATETIME)
+        Users (Id INT PK, Email TEXT, Name TEXT, Role TEXT ['User','CompanyAdmin','SuperAdmin'], CompanyId INT FK→Companies NULL, CreatedAt DATETIME)
+
+        MenuItems (Id INT PK, Name TEXT, Description TEXT, Price DECIMAL, Category TEXT, ImageUrl TEXT, IsActive BOOL, CompanyId INT FK→Companies, CreatedAt DATETIME, UpdatedAt DATETIME)
 
         DailyStocks (Id INT PK, MenuItemId INT FK→MenuItems, Date DATE, QuantityAvailable INT, QuantityOrdered INT)
 
-        Orders (Id INT PK, UserId INT FK→Users, Status TEXT ['Placed','Preparing','Ready','Collected'], TotalAmount DECIMAL, CreatedAt DATETIME, UpdatedAt DATETIME)
+        Orders (Id INT PK, UserId INT FK→Users, CompanyId INT FK→Companies, Status TEXT ['Placed','Preparing','Ready','Collected'], TotalAmount DECIMAL, CreatedAt DATETIME, UpdatedAt DATETIME)
 
         OrderItems (Id INT PK, OrderId INT FK→Orders, MenuItemId INT FK→MenuItems, Quantity INT, UnitPrice DECIMAL)
         """;
 
-    private static ClaudeAgentDefinition BuildAgentDef() => new()
+    private static ClaudeAgentDefinition BuildAgentDef(int? companyId) => new()
     {
         Model = "claude-haiku-5-5",
         MaxTokens = 512,
@@ -29,6 +31,9 @@ public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory 
             "You are a SQL generator for a canteen database (SQLite).\n" +
             "Given a natural-language question, respond ONLY with a JSON object — no markdown, no explanation.\n\n" +
             "Schema:\n" + DbSchema + "\n\n" +
+            (companyId.HasValue
+                ? $"IMPORTANT: The current user belongs to CompanyId={companyId.Value}. ALL queries MUST filter by CompanyId={companyId.Value} to ensure data isolation. For MenuItems, Orders, and Users, always include WHERE CompanyId = {companyId.Value}. For DailyStocks, join with MenuItems and filter by MenuItems.CompanyId = {companyId.Value}.\n\n"
+                : "The current user is a SuperAdmin with access to all companies. Include company context in results when relevant.\n\n") +
             "Response format (STRICT — no other keys):\n" +
             """
             {
@@ -50,12 +55,12 @@ public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory 
         Tools = []
     };
 
-    public async Task<AnalyticsResult> QueryAsync(string question, CancellationToken ct = default)
+    public async Task<AnalyticsResult> QueryAsync(string question, int? companyId, CancellationToken ct = default)
     {
         ClaudeResponse response;
         try
         {
-            response = await client.SendAsync(BuildAgentDef(), [new { role = "user", content = question }], ct);
+            response = await client.SendAsync(BuildAgentDef(companyId), [new { role = "user", content = question }], ct);
         }
         catch (Exception ex) when (ex.Message.Contains("API key") || ex.Message.Contains("401") || ex.Message.Contains("authentication"))
         {
@@ -71,7 +76,6 @@ public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory 
             .Where(b => b.Type == "text")
             .Select(b => b.Text)).Trim();
 
-        // Strip markdown code fences if Claude wraps the JSON
         if (text.StartsWith("```"))
         {
             var firstNewline = text.IndexOf('\n');
@@ -96,7 +100,6 @@ public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory 
             return new AnalyticsResult { Error = "Failed to understand the query. Please rephrase." };
         }
 
-        // Safety: reject anything that isn't a SELECT
         var sqlUpper = parsed.Sql.TrimStart().ToUpperInvariant();
         if (!sqlUpper.StartsWith("SELECT"))
         {
@@ -104,7 +107,6 @@ public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory 
             return new AnalyticsResult { Error = "Only read queries are allowed." };
         }
 
-        // Execute the SQL read-only
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CanteenDbContext>();
         var conn = db.Database.GetDbConnection();

@@ -1,9 +1,9 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CanteenApi.Data;
 using CanteenApi.Models;
+using CanteenApi.Extensions;
 
 namespace CanteenApi.Controllers;
 
@@ -26,11 +26,14 @@ public class OrderController(CanteenDbContext db) : ControllerBase
         if (req.Items is null || req.Items.Count == 0)
             return BadRequest(new { message = "Order must have at least one item" });
 
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var userId = User.GetUserId();
+        var companyId = User.GetCompanyId();
+        if (companyId is null)
+            return BadRequest(new { message = "SuperAdmin cannot place orders directly" });
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        var order = new Order { Status = "Placed", TotalAmount = 0 };
-        order.UserId = userId;
+        var order = new Order { Status = "Placed", TotalAmount = 0, UserId = userId, CompanyId = companyId.Value };
 
         foreach (var line in req.Items)
         {
@@ -41,7 +44,8 @@ public class OrderController(CanteenDbContext db) : ControllerBase
                 .Include(s => s.MenuItem)
                 .FirstOrDefaultAsync(s => s.MenuItemId == line.MenuItemId
                                          && s.Date == today
-                                         && s.MenuItem.IsActive);
+                                         && s.MenuItem.IsActive
+                                         && s.MenuItem.CompanyId == companyId);
 
             if (stock is null)
                 return BadRequest(new { message = $"Item {line.MenuItemId} is not available today" });
@@ -71,7 +75,7 @@ public class OrderController(CanteenDbContext db) : ControllerBase
     [HttpGet("my")]
     public async Task<IActionResult> MyOrders()
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var userId = User.GetUserId();
 
         var orders = await db.Orders
             .Include(o => o.Items).ThenInclude(oi => oi.MenuItem)
@@ -85,7 +89,7 @@ public class OrderController(CanteenDbContext db) : ControllerBase
     [HttpGet("my/active")]
     public async Task<IActionResult> MyActiveOrders()
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var userId = User.GetUserId();
 
         var orders = await db.Orders
             .Include(o => o.Items).ThenInclude(oi => oi.MenuItem)
@@ -100,29 +104,39 @@ public class OrderController(CanteenDbContext db) : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetOrder(int id)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        var userId = User.GetUserId();
+        var companyId = User.GetCompanyId();
 
         var order = await db.Orders
             .Include(o => o.Items).ThenInclude(oi => oi.MenuItem)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order is null) return NotFound();
-        if (role != "Admin" && order.UserId != userId) return Forbid();
+
+        if (!User.IsSuperAdmin() && order.CompanyId != companyId)
+            return Forbid();
+
+        if (!User.IsCompanyAdmin() && order.UserId != userId)
+            return Forbid();
 
         return Ok(ToResponse(order));
     }
 
     [HttpGet("active")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "CompanyAdmin,SuperAdmin")]
     public async Task<IActionResult> ActiveOrders()
     {
-        var orders = await db.Orders
+        var companyId = User.GetCompanyId();
+
+        var query = db.Orders
             .Include(o => o.Items).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.User)
-            .Where(o => o.Status == "Placed" || o.Status == "Preparing" || o.Status == "Ready")
-            .OrderBy(o => o.CreatedAt)
-            .ToListAsync();
+            .Where(o => o.Status == "Placed" || o.Status == "Preparing" || o.Status == "Ready");
+
+        if (!User.IsSuperAdmin())
+            query = query.Where(o => o.CompanyId == companyId);
+
+        var orders = await query.OrderBy(o => o.CreatedAt).ToListAsync();
 
         return Ok(orders.Select(o => new
         {
@@ -139,7 +153,7 @@ public class OrderController(CanteenDbContext db) : ControllerBase
     }
 
     [HttpPut("{id}/status")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "CompanyAdmin,SuperAdmin")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest req)
     {
         var order = await db.Orders
@@ -147,6 +161,9 @@ public class OrderController(CanteenDbContext db) : ControllerBase
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order is null) return NotFound();
+
+        if (!User.IsSuperAdmin() && order.CompanyId != User.GetCompanyId())
+            return Forbid();
 
         if (!AllowedTransitions.TryGetValue(order.Status, out var allowed) || !allowed.Contains(req.Status))
             return BadRequest(new { message = $"Cannot transition from {order.Status} to {req.Status}" });
@@ -161,7 +178,7 @@ public class OrderController(CanteenDbContext db) : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> CancelOrder(int id)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var userId = User.GetUserId();
 
         var order = await db.Orders
             .Include(o => o.Items)

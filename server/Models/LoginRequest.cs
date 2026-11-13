@@ -1,5 +1,5 @@
 namespace CanteenApi.Models;
 
 public record LoginRequest(string Email, string Password);
-public record RegisterRequest(string Email, string Password, string Name);
-public record AuthResponse(string Token, string Email, string Name, string Role);
+public record RegisterRequest(string Email, string Password, string Name, int CompanyId);
+public record AuthResponse(string Token, string Email, string Name, string Role, int? CompanyId, string? CompanyName);
