@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canteen Connect — SSE Streaming</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --code-bg: #eaf0ee;
+    --phase: #6d28d9;
+    --phase-soft: #f0ebff;
+    --stream: #0369a1;
+    --stream-soft: #e0f2fe;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514;
+      --surface: #151f1d;
+      --ink: #e5eeec;
+      --muted: #94a8a2;
+      --line: #25352f;
+      --accent: #5eead4;
+      --accent-soft: #123430;
+      --warn: #fbbf24;
+      --warn-soft: #302509;
+      --code-bg: #101a18;
+      --phase: #a78bfa;
+      --phase-soft: #1e1538;
+      --stream: #38bdf8;
+      --stream-soft: #0c2d44;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514;
+    --surface: #151f1d;
+    --ink: #e5eeec;
+    --muted: #94a8a2;
+    --line: #25352f;
+    --accent: #5eead4;
+    --accent-soft: #123430;
+    --warn: #fbbf24;
+    --warn-soft: #302509;
+    --code-bg: #101a18;
+    --phase: #a78bfa;
+    --phase-soft: #1e1538;
+    --stream: #38bdf8;
+    --stream-soft: #0c2d44;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.6 var(--font-body);
+    padding-inline: 16px;
+    padding-block: 24px 64px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    nav.toc { position: static; }
+    nav.toc ol { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+  nav.toc { position: sticky; top: 16px; align-self: start; padding-top: 8px; font-size: 14px; }
+  nav.toc p { margin: 0 0 8px; font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 0 4px 10px; border-left: 2px solid var(--line); }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); outline: none; }
+
+  main { min-width: 0; }
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font: 600 18px/1.3 var(--font-display); margin: 28px 0 8px; }
+  h4 { font: 600 15px/1.3 var(--font-display); margin: 20px 0 6px; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  section { padding-block: 40px 8px; border-top: 1px solid var(--line); margin-top: 32px; scroll-margin-top: 16px; }
+  header.top + section { margin-top: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; max-width: 72ch; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+
+  code { font: 500 .88em var(--font-mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 18px; font: 400 13.5px/1.55 var(--font-mono); }
+  pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .scroll { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.phase { background: var(--phase-soft); color: var(--phase); }
+  .chip.stream { background: var(--stream-soft); color: var(--stream); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 18px; max-width: 72ch; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .cols > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .cols h3 { margin-top: 0; }
+  .cols p:last-child, .cols ul:last-child { margin-bottom: 0; }
+
+  .fn { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px 6px; margin: 0 0 16px; }
+  .fn > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+  .fn > header code { font-size: 15px; background: none; padding: 0; color: var(--accent); }
+  .fn p { max-width: none; }
+  .fn .k { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+  .fn pre { margin-top: 4px; }
+
+  ol.trace { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; margin: 0 0 18px; max-width: none; }
+  ol.trace li { counter-increment: s; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  ol.trace li::before { content: counter(s); font: 600 14px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  ol.trace li > div > :last-child { margin-bottom: 0; }
+  ol.trace b { display: block; margin-bottom: 2px; }
+
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 0 0 20px; }
+  .diagram svg { display: block; min-width: 720px; width: 100%; height: auto; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#why-sse">Why SSE</a></li>
+      <li><a href="#protocol">Wire protocol</a></li>
+      <li><a href="#backend-layers">Backend layers</a></li>
+      <li><a href="#client-parse">Client-side parsing</a></li>
+      <li><a href="#streaming-loop">Streaming agentic loop</a></li>
+      <li><a href="#chat-ui">React chat UI</a></li>
+      <li><a href="#bug-fix">JsonElement bug fix</a></li>
+      <li><a href="#error-handling">Error handling</a></li>
+      <li><a href="#files">Files</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">company-canteen &middot; SSE streaming</p>
+      <h1>SSE streaming with agentic tool calling</h1>
+      <p class="lede">Real-time token-by-token streaming from Claude through the .NET backend to the React frontend, using Server-Sent Events. Text deltas, tool-start, and tool-done events stream as they happen &mdash; no waiting for the full response. The agentic tool-use loop runs between streaming rounds.</p>
+    </header>
+
+    <!-- ================================================================ -->
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>The non-streaming chat endpoint (<code>POST /api/chat</code>) waits for Claude to finish all tool rounds before returning the complete response. The streaming endpoint (<code>POST /api/chat/stream</code>) sends events as they happen &mdash; text characters appear immediately, and tool calls show live status indicators.</p>
+
+      <div class="cols">
+        <div>
+          <h3>Non-streaming <span class="chip plain">before</span></h3>
+          <ul>
+            <li>User sends message</li>
+            <li>Waits 2&ndash;5 seconds (all tool rounds)</li>
+            <li>Gets complete response at once</li>
+            <li>No feedback during processing</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Streaming <span class="chip stream">after</span></h3>
+          <ul>
+            <li>User sends message</li>
+            <li>Text appears token-by-token (~50ms per token)</li>
+            <li>Tool calls show live status (&#x27f3; running &rarr; &#x2713; done)</li>
+            <li>Multi-round loops stream each round incrementally</li>
+          </ul>
+        </div>
+      </div>
+
+      <p>The implementation spans four layers, each with both a non-streaming and streaming path:</p>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Layer</th><th>Non-streaming</th><th>Streaming</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>IClaudeMessageClient</code></td>
+            <td><code>SendAsync()</code> &rarr; <code>ClaudeResponse</code></td>
+            <td><code>SendStreamAsync()</code> &rarr; <code>IAsyncEnumerable&lt;ClaudeStreamEvent&gt;</code></td>
+          </tr>
+          <tr>
+            <td><code>ClaudeApiService</code></td>
+            <td><code>SendAsync()</code> with agentic loop</td>
+            <td><code>SendStreamAsync()</code> with streaming agentic loop</td>
+          </tr>
+          <tr>
+            <td><code>ChatService</code></td>
+            <td><code>SendMessage()</code></td>
+            <td><code>SendMessageStream()</code> (passthrough)</td>
+          </tr>
+          <tr>
+            <td><code>ChatController</code></td>
+            <td><code>POST /api/chat</code> &rarr; JSON response</td>
+            <td><code>POST /api/chat/stream</code> &rarr; SSE stream</td>
+          </tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="why-sse">
+      <h2>Why SSE</h2>
+      <p>Server-Sent Events is the right transport here because the data flow is strictly one-directional: server to client. There is no need for the client to send messages <em>during</em> a stream &mdash; it sends one HTTP POST, then reads events until the stream ends.</p>
+
+      <div class="cols">
+        <div>
+          <h3>SSE <span class="chip stream">chosen</span></h3>
+          <ul>
+            <li>Regular HTTP &mdash; works through proxies, CDNs, load balancers</li>
+            <li>Native browser support via <code>EventSource</code> (or <code>fetch</code> + <code>ReadableStream</code>)</li>
+            <li>Automatic reconnection built into the protocol</li>
+            <li>Text-based, easy to debug with browser DevTools</li>
+            <li>What Claude's own API uses for streaming</li>
+          </ul>
+        </div>
+        <div>
+          <h3>WebSocket <span class="chip plain">not needed</span></h3>
+          <ul>
+            <li>Full-duplex &mdash; unnecessary for a request/response chat</li>
+            <li>Binary framing adds complexity</li>
+            <li>Connection upgrade can fail behind some proxies</li>
+            <li>Requires SignalR or raw WS library</li>
+            <li>Overkill when data flows one way</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><strong>SSE format.</strong> Each event is a line starting with <code>data: </code> followed by JSON, terminated by <code>\n\n</code>. The stream ends with <code>data: [DONE]\n\n</code>. This is the same format Claude's API uses, making the backend a near-transparent relay.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="protocol">
+      <h2>Wire protocol</h2>
+      <p>The streaming endpoint sends three event types as JSON, each on a <code>data:</code> line:</p>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Event</th><th>JSON shape</th><th>When</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>text</code></td>
+            <td><code>{"type":"text","text":"Hello"}</code></td>
+            <td>Each text token from Claude (many per response)</td>
+          </tr>
+          <tr>
+            <td><code>tool_start</code></td>
+            <td><code>{"type":"tool_start","tool":"get_today_menu"}</code></td>
+            <td>Claude begins a tool call block</td>
+          </tr>
+          <tr>
+            <td><code>tool_done</code></td>
+            <td><code>{"type":"tool_done","tool":"get_today_menu"}</code></td>
+            <td>Tool execution completed (after DB query)</td>
+          </tr>
+          <tr>
+            <td><code>error</code></td>
+            <td><code>{"type":"error","text":"Something went wrong."}</code></td>
+            <td>Unrecoverable error during streaming</td>
+          </tr>
+          <tr>
+            <td><code>[DONE]</code></td>
+            <td><em>literal string, not JSON</em></td>
+            <td>Stream complete</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h4>Example raw SSE stream</h4>
+      <p>A user asks "what's for lunch?" &mdash; Claude calls <code>get_today_menu</code>, gets menu data, then formats a response:</p>
+<pre><code>data: {"type":"tool_start","tool":"get_today_menu"}
+
+data: {"type":"tool_done","tool":"get_today_menu"}
+
+data: {"type":"text","text":"Here"}
+
+data: {"type":"text","text":"'s"}
+
+data: {"type":"text","text":" what"}
+
+data: {"type":"text","text":"'s"}
+
+data: {"type":"text","text":" available"}
+
+data: {"type":"text","text":" today"}
+
+data: {"type":"text","text":":\n\n"}
+
+data: {"type":"text","text":"**"}
+
+data: {"type":"text","text":"Masala"}
+
+data: {"type":"text","text":" Chai"}
+
+data: {"type":"text","text":"**"}
+
+data: {"type":"text","text":" &mdash; "}
+
+data: {"type":"text","text":"&#x20B9;20"}
+
+data: {"type":"text","text":" ("}
+
+data: {"type":"text","text":"50"}
+
+data: {"type":"text","text":" left)"}
+
+data: [DONE]
+
+</code></pre>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="backend-layers">
+      <h2>Backend layers</h2>
+      <p>Three C# layers collaborate to produce the SSE stream. Each layer uses <code>IAsyncEnumerable&lt;ClaudeStreamEvent&gt;</code> and <code>yield return</code> to pass events upstream without buffering.</p>
+
+      <h3>Layer 1: HttpClaudeClient.SendStreamAsync</h3>
+      <div class="fn">
+        <header><code>SendStreamAsync</code><span class="chip stream">SSE parser</span></header>
+        <p><span class="k">File</span> <code>server/Services/HttpClaudeClient.cs</code></p>
+        <p>Sends a request with <code>stream: true</code> to Claude's API, reads the SSE response line-by-line, and yields typed events. Accumulates text and tool-input fragments across <code>content_block_delta</code> events, then yields a <code>RoundComplete</code> event with the fully assembled <code>ClaudeResponse</code>.</p>
+<pre><code>// Key: read headers only, don't buffer the full response
+using var resp = await httpClient.SendAsync(request,
+    HttpCompletionOption.ResponseHeadersRead, ct);
+
+using var stream = await resp.Content.ReadAsStreamAsync(ct);
+using var reader = new StreamReader(stream);
+
+while (!reader.EndOfStream)
+{
+    var line = await reader.ReadLineAsync(ct);
+    if (!line.StartsWith("data: ")) continue;
+    var data = line["data: ".Length..];
+    if (data == "[DONE]") break;
+
+    var evt = JsonDocument.Parse(data).RootElement;
+    var evtType = evt.GetProperty("type").GetString();
+
+    switch (evtType)
+    {
+        case "content_block_start":
+            // Begin text or tool_use block
+            break;
+        case "content_block_delta":
+            // Accumulate text_delta or input_json_delta
+            if (deltaType == "text_delta")
+                yield return new ClaudeStreamEvent {
+                    Type = StreamEventType.TextDelta,
+                    Text = chunk
+                };
+            break;
+        case "content_block_stop":
+            // Finalize the block (add to blocks list)
+            break;
+        case "message_delta":
+            // Extract stop_reason and output_tokens
+            break;
+        case "message_start":
+            // Extract input_tokens
+            break;
+    }
+}
+
+// Final event: assembled ClaudeResponse for the agentic loop
+yield return new ClaudeStreamEvent {
+    Type = StreamEventType.RoundComplete,
+    Response = new ClaudeResponse { ... }
+};</code></pre>
+      </div>
+
+      <h4>Claude SSE event types mapped</h4>
+      <div class="scroll"><table>
+        <thead><tr><th>Claude SSE event</th><th>What it carries</th><th>Our action</th></tr></thead>
+        <tbody>
+          <tr><td><code>message_start</code></td><td><code>usage.input_tokens</code></td><td>Track input token count</td></tr>
+          <tr><td><code>content_block_start</code></td><td>Block type (<code>text</code> or <code>tool_use</code>), tool id/name</td><td>Initialize accumulators; yield <code>ToolStart</code> for tool blocks</td></tr>
+          <tr><td><code>content_block_delta</code></td><td><code>text_delta</code> or <code>input_json_delta</code></td><td>Yield <code>TextDelta</code>; accumulate tool input JSON fragments</td></tr>
+          <tr><td><code>content_block_stop</code></td><td>Block boundary</td><td>Finalize text or tool_use <code>ContentBlock</code></td></tr>
+          <tr><td><code>message_delta</code></td><td><code>stop_reason</code>, <code>output_tokens</code></td><td>Track stop reason and output token count</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Layer 2: ClaudeApiService.SendStreamAsync</h3>
+      <div class="fn">
+        <header><code>SendStreamAsync</code><span class="chip phase">agentic loop</span></header>
+        <p><span class="k">File</span> <code>server/Services/ClaudeApiService.cs</code></p>
+        <p>The streaming agentic loop. Iterates up to 10 rounds. Each round streams events from <code>HttpClaudeClient</code>, yielding <code>TextDelta</code> and <code>ToolStart</code> immediately to the caller. When <code>RoundComplete</code> arrives, it checks whether Claude wants tools &mdash; if so, executes them (yielding <code>ToolDone</code>), appends results, and continues the next round.</p>
+<pre><code>public async IAsyncEnumerable&lt;ClaudeStreamEvent&gt; SendStreamAsync(
+    string query, ClaudeAgentDefinition agentDef,
+    Func&lt;string, JsonElement, Task&lt;string&gt;&gt; dispatchTool,
+    List&lt;ChatMessage&gt;? history = null,
+    [EnumeratorCancellation] CancellationToken ct = default)
+{
+    var messages = new List&lt;object&gt;();
+    // ... build messages from history + query
+
+    for (var round = 0; round &lt; MaxToolRounds; round++)
+    {
+        ClaudeResponse? roundResponse = null;
+
+        // Stream events from this round, yielding text/tool_start
+        await foreach (var evt in client.SendStreamAsync(agentDef, messages, ct))
+        {
+            if (evt.Type == StreamEventType.RoundComplete)
+                roundResponse = evt.Response;  // capture, don't yield
+            else
+                yield return evt;  // pass through to controller
+        }
+
+        if (roundResponse?.StopReason != "tool_use")
+            break;  // Claude is done
+
+        // Execute tools between rounds
+        messages.Add(new { role = "assistant", content = /* ... */ });
+        var toolResults = new List&lt;object&gt;();
+
+        foreach (var block in roundResponse.Content.Where(b =&gt; b.Type == "tool_use"))
+        {
+            var toolResult = await dispatchTool(block.Name!, block.Input);
+            yield return new ClaudeStreamEvent {
+                Type = StreamEventType.ToolDone,
+                ToolName = block.Name
+            };
+            toolResults.Add(new { type = "tool_result", tool_use_id = block.Id, content = toolResult });
+        }
+
+        messages.Add(new { role = "user", content = toolResults.ToArray() });
+        // Loop continues &rarr; next round streams from Claude with tool results
+    }
+}</code></pre>
+      </div>
+
+      <h3>Layer 3: ChatController SSE endpoint</h3>
+      <div class="fn">
+        <header><code>POST /api/chat/stream</code><span class="chip">controller</span></header>
+        <p><span class="k">File</span> <code>server/Controllers/ChatController.cs</code></p>
+        <p>Sets the <code>text/event-stream</code> content type, iterates the <code>IAsyncEnumerable</code>, maps each event to JSON, writes <code>data: {json}\n\n</code>, and flushes after every event. Sends <code>data: [DONE]\n\n</code> when the stream ends.</p>
+<pre><code>[HttpPost("stream")]
+public async Task Stream([FromBody] ChatRequest req)
+{
+    Response.ContentType = "text/event-stream";
+    Response.Headers.CacheControl = "no-cache";
+    Response.Headers.Connection = "keep-alive";
+
+    var ct = HttpContext.RequestAborted;
+
+    await foreach (var evt in chatService.SendMessageStream(
+        req.Message, userId, companyId.Value, req.History, ct))
+    {
+        var json = evt.Type switch
+        {
+            StreamEventType.TextDelta  =&gt; Serialize(new { type = "text", text = evt.Text }),
+            StreamEventType.ToolStart  =&gt; Serialize(new { type = "tool_start", tool = evt.ToolName }),
+            StreamEventType.ToolDone   =&gt; Serialize(new { type = "tool_done", tool = evt.ToolName }),
+            _ =&gt; null
+        };
+
+        if (json == null) continue;
+        await Response.WriteAsync($"data: {json}\n\n", ct);
+        await Response.Body.FlushAsync(ct);
+    }
+
+    await Response.WriteAsync("data: [DONE]\n\n", ct);
+    await Response.Body.FlushAsync(ct);
+}</code></pre>
+      </div>
+
+      <div class="note">
+        <p><strong>Three critical SSE headers.</strong> <code>Content-Type: text/event-stream</code> tells the browser this is an SSE stream. <code>Cache-Control: no-cache</code> prevents buffering by intermediate proxies. <code>Connection: keep-alive</code> keeps the TCP connection open for the duration of the stream.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="client-parse">
+      <h2>Client-side SSE parsing</h2>
+      <p>The React client uses <code>fetch</code> with a <code>ReadableStream</code> reader rather than the native <code>EventSource</code> API. This is because <code>EventSource</code> only supports <code>GET</code> requests &mdash; our endpoint is <code>POST</code> with a JSON body and an <code>Authorization</code> header.</p>
+
+      <div class="fn">
+        <header><code>streamChat()</code><span class="chip stream">AsyncGenerator</span></header>
+        <p><span class="k">File</span> <code>client/src/api/chat.ts</code></p>
+        <p>An <code>async function*</code> (AsyncGenerator) that POSTs to the stream endpoint, then reads chunks from the response body. Chunks may contain partial lines, so a buffer accumulates text and splits on newlines. Each <code>data:</code> line is parsed as JSON and yielded as a typed <code>StreamEvent</code>.</p>
+<pre><code>export async function* streamChat(
+  message: string, history: ChatMessage[]
+): AsyncGenerator&lt;StreamEvent&gt; {
+
+  const res = await fetch(`${API}/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ message, history }),
+  });
+
+  const reader = res.body?.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6);
+      if (data === "[DONE]") { yield { type: "done" }; return; }
+      yield JSON.parse(data) as StreamEvent;
+    }
+  }
+}</code></pre>
+      </div>
+
+      <h3>TypeScript event types</h3>
+<pre><code>export type StreamEvent =
+  | { type: "text"; text: string }
+  | { type: "tool_start"; tool: string }
+  | { type: "tool_done"; tool: string }
+  | { type: "error"; text: string }
+  | { type: "done" };</code></pre>
+
+      <div class="note">
+        <p><strong>Why AsyncGenerator?</strong> The <code>async function*</code> pattern lets the React component consume events with a clean <code>for await</code> loop. Each <code>yield</code> pauses the generator until the component is ready for the next event. This provides natural backpressure and keeps the parsing logic separate from the UI rendering.</p>
+      </div>
+
+      <h3>Buffer handling</h3>
+      <p>TCP chunks don't align with SSE event boundaries. A single <code>reader.read()</code> might return half a line, or three lines at once. The buffer-and-split approach handles this:</p>
+      <ol>
+        <li>Append the decoded chunk to a buffer string</li>
+        <li>Split on <code>\n</code> &mdash; the last element may be incomplete</li>
+        <li><code>lines.pop()</code> removes the possibly-incomplete tail back into the buffer</li>
+        <li>Process only complete lines (those that survived the split)</li>
+      </ol>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="streaming-loop">
+      <h2>Streaming agentic loop</h2>
+      <p>The key insight: streaming and tool calling work together seamlessly. Text tokens stream <em>within</em> a round, and tool execution happens <em>between</em> rounds. The user sees text appearing in real-time, then a tool status indicator, then more streaming text.</p>
+
+      <h3>Multi-round timeline</h3>
+      <p>A user says "order 2 chai for me". Claude first needs the menu (round 1), then places the order (round 2), then confirms (round 3):</p>
+
+      <ol class="trace">
+        <li><div>
+          <b>Round 1: Claude calls <code>get_today_menu</code></b>
+          <p>Client sees: <span class="chip stream">tool_start</span> "Checking today's menu..." &rarr; <em>(server queries DB, ~20ms)</em> &rarr; <span class="chip stream">tool_done</span> "&#x2713; Checking today's menu"</p>
+        </div></li>
+        <li><div>
+          <b>Round 2: Claude sees the menu and calls <code>place_order</code></b>
+          <p>Client sees: streaming text "I'll order 2 Masala Chai for you..." &rarr; <span class="chip stream">tool_start</span> "Placing your order..." &rarr; <em>(server creates order, decrements stock)</em> &rarr; <span class="chip stream">tool_done</span> "&#x2713; Placing your order"</p>
+        </div></li>
+        <li><div>
+          <b>Round 3: Claude confirms with final text</b>
+          <p>Client sees: streaming text "Done! Order #42 placed. 2x Masala Chai &mdash; &#x20B9;40 total. Your order is in the queue!"</p>
+        </div></li>
+      </ol>
+
+      <h3>Event types (internal)</h3>
+      <div class="fn">
+        <header><code>StreamEventType</code><span class="chip plain">enum</span></header>
+        <p><span class="k">File</span> <code>server/Services/IClaudeMessageClient.cs</code></p>
+<pre><code>public enum StreamEventType
+{
+    TextDelta,     // A chunk of text from Claude
+    ToolStart,     // Claude is beginning a tool call
+    ToolDone,      // Tool execution completed
+    RoundComplete  // Internal: full response assembled (not sent to client)
+}</code></pre>
+        <p><code>RoundComplete</code> is consumed internally by the agentic loop to reconstruct the full <code>ClaudeResponse</code> for message accumulation. It is never serialized to the client.</p>
+      </div>
+
+      <div class="note">
+        <p><strong>ToolStart vs ToolDone timing.</strong> <code>ToolStart</code> is emitted by <code>HttpClaudeClient</code> when Claude's SSE stream sends <code>content_block_start</code> for a <code>tool_use</code> block. <code>ToolDone</code> is emitted by <code>ClaudeApiService</code> after the tool actually executes (the DB query completes). This means the user sees "Checking today's menu..." <em>before</em> the database is even queried &mdash; maximum perceived responsiveness.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="chat-ui">
+      <h2>React chat UI</h2>
+      <p>The <code>ChatPage</code> component consumes the streaming events and renders them in real-time. It maintains an array of <code>DisplayMessage</code> objects that grow as events arrive.</p>
+
+      <div class="fn">
+        <header><code>ChatPage.tsx</code><span class="chip">React</span></header>
+        <p><span class="k">File</span> <code>client/src/pages/ChatPage.tsx</code></p>
+        <p>The component uses a <code>for await</code> loop over the <code>streamChat()</code> AsyncGenerator, dispatching each event type to a state update:</p>
+<pre><code>for await (const evt of streamChat(text.trim(), history)) {
+  switch (evt.type) {
+    case "text":
+      // Append text chunk to the last assistant message
+      setMessages(prev =&gt; {
+        const next = [...prev];
+        const last = { ...next[next.length - 1] };
+        last.content += evt.text;
+        next[next.length - 1] = last;
+        return next;
+      });
+      break;
+
+    case "tool_start":
+      // Add tool event with status "running"
+      setMessages(prev =&gt; {
+        const next = [...prev];
+        const last = { ...next[next.length - 1] };
+        last.toolEvents = [
+          ...(last.toolEvents ?? []),
+          { tool: evt.tool, status: "running" },
+        ];
+        next[next.length - 1] = last;
+        return next;
+      });
+      break;
+
+    case "tool_done":
+      // Update tool status from "running" to "done"
+      setMessages(prev =&gt; {
+        const next = [...prev];
+        const last = { ...next[next.length - 1] };
+        last.toolEvents = (last.toolEvents ?? []).map(t =&gt;
+          t.tool === evt.tool ? { ...t, status: "done" } : t
+        );
+        next[next.length - 1] = last;
+        return next;
+      });
+      break;
+  }
+}</code></pre>
+      </div>
+
+      <h3>UI features</h3>
+      <div class="cols">
+        <div>
+          <h3>Suggestion chips</h3>
+          <p>When the chat is empty, three suggestion buttons appear: "What's on the menu today?", "Order 2 chai for me", "What's the cheapest item available?" Clicking one sends that message immediately.</p>
+        </div>
+        <div>
+          <h3>Tool status indicators</h3>
+          <p>Tool events render above the message text: <strong>&#x27f3;</strong> <em>Checking today's menu...</em> (running, teal italic) or <strong>&#x2713;</strong> Checking today's menu (done, grey). Human-readable labels map tool names: <code>get_today_menu</code> &rarr; "Checking today's menu".</p>
+        </div>
+        <div>
+          <h3>Streaming cursor</h3>
+          <p>While waiting for the first text token, a blinking <strong>&#x25cf;</strong> cursor shows the assistant is thinking. It disappears once text starts arriving.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="bug-fix">
+      <h2>JsonElement bug fix</h2>
+      <p>A subtle serialization bug caused streaming to silently fail on the second agentic round. This is worth documenting because the failure mode was completely invisible.</p>
+
+      <h3>The problem</h3>
+      <p>When Claude calls <code>get_today_menu</code>, the tool has no input parameters. Claude's streaming API sends the <code>content_block_start</code> event with an empty input, then no <code>input_json_delta</code> events. In our SSE parser, <code>inputJsonAccumulator</code> remained empty.</p>
+      <p>The original code used <code>default</code> for the empty case:</p>
+<pre><code>// BUG: default(JsonElement) has ValueKind.Undefined
+var inputElement = string.IsNullOrEmpty(inputJson)
+    ? default                              // &larr; ValueKind.Undefined
+    : JsonDocument.Parse(inputJson).RootElement;</code></pre>
+      <p><code>default(JsonElement)</code> has <code>ValueKind = Undefined</code>. This value was stored in the <code>ContentBlock.Input</code> property and added to the <code>blocks</code> list. When the agentic loop built the messages array for round 2, it serialized these blocks including the <code>Undefined</code> <code>JsonElement</code> &mdash; and <code>JsonSerializer.Serialize</code> throws on <code>ValueKind.Undefined</code>.</p>
+
+      <h3>The fix</h3>
+<pre><code>// FIX: parse an empty object to get ValueKind.Object
+var inputElement = string.IsNullOrEmpty(inputJson)
+    ? JsonDocument.Parse("{}").RootElement  // &larr; ValueKind.Object
+    : JsonDocument.Parse(inputJson).RootElement;</code></pre>
+
+      <h3>Why it was hard to find</h3>
+      <ul>
+        <li>The <strong>first</strong> Claude API call succeeded &mdash; the stream worked fine</li>
+        <li>The crash happened during <strong>serialization for the second call</strong>, not during parsing</li>
+        <li>The controller's generic <code>catch (Exception)</code> returned <code>{"type":"error","text":"Something went wrong."}</code> &mdash; no stack trace in the client</li>
+        <li>The network response showed: <code>tool_start</code> &rarr; <code>tool_done</code> &rarr; <code>error</code> (no text events). This looked like Claude refused to respond, not a serialization bug</li>
+      </ul>
+
+      <div class="note warn">
+        <p><strong>Lesson.</strong> When using <code>JsonElement</code> as a DTO field in C#, never use <code>default</code>. Always parse an explicit value (<code>JsonDocument.Parse("{}").RootElement</code>) to ensure the element has a valid <code>ValueKind</code>. The non-streaming path didn't hit this because the non-streaming response includes the full <code>input</code> property as a JSON object &mdash; the empty-input case only manifests in the streaming SSE parser.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="error-handling">
+      <h2>Error handling</h2>
+      <p>Errors can occur at three points: the Claude API call, tool execution, or client-side parsing. Each layer handles errors differently.</p>
+
+      <div class="scroll"><table>
+        <thead><tr><th>Layer</th><th>Error type</th><th>Handling</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>HttpClaudeClient</code></td>
+            <td>Claude API returns non-2xx</td>
+            <td>Throws exception with status code and body</td>
+          </tr>
+          <tr>
+            <td><code>ChatController</code></td>
+            <td><code>OperationCanceledException</code></td>
+            <td>Silently swallowed (client disconnected)</td>
+          </tr>
+          <tr>
+            <td><code>ChatController</code></td>
+            <td>Any other exception</td>
+            <td>Writes <code>{"type":"error","text":"Something went wrong."}</code> to the stream</td>
+          </tr>
+          <tr>
+            <td><code>streamChat()</code></td>
+            <td>HTTP 401</td>
+            <td>Yields <code>{"type":"error","text":"Please log in again."}</code></td>
+          </tr>
+          <tr>
+            <td><code>streamChat()</code></td>
+            <td>Malformed JSON in SSE line</td>
+            <td>Silently skipped (<code>try { JSON.parse } catch {}</code>)</td>
+          </tr>
+          <tr>
+            <td><code>ChatPage</code></td>
+            <td>Network error or stream breaks</td>
+            <td>Shows "Connection lost. Please try again." in the message bubble</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <p><strong>Cancellation.</strong> The controller passes <code>HttpContext.RequestAborted</code> as the <code>CancellationToken</code> all the way down to the Claude API call. If the user navigates away mid-stream, the token fires, the <code>StreamReader</code> throws <code>OperationCanceledException</code>, and the controller catches it silently. No wasted API calls or open connections.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="files">
+      <h2>Files</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>File</th><th>Role</th><th>Layer</th></tr></thead>
+        <tbody>
+          <tr><td><code>server/Services/IClaudeMessageClient.cs</code></td><td>Interface: <code>SendStreamAsync</code>, <code>ClaudeStreamEvent</code>, <code>StreamEventType</code> enum</td><td><span class="chip">contract</span></td></tr>
+          <tr><td><code>server/Services/HttpClaudeClient.cs</code></td><td>Claude SSE parser: reads <code>stream: true</code> response line-by-line</td><td><span class="chip stream">SSE parser</span></td></tr>
+          <tr><td><code>server/Services/ClaudeApiService.cs</code></td><td>Streaming agentic loop: streams text, executes tools between rounds</td><td><span class="chip phase">agentic loop</span></td></tr>
+          <tr><td><code>server/Services/ChatService.cs</code></td><td><code>SendMessageStream()</code>: passthrough with company-scoped tool dispatch</td><td><span class="chip plain">business</span></td></tr>
+          <tr><td><code>server/Controllers/ChatController.cs</code></td><td><code>POST /api/chat/stream</code>: SSE endpoint with flush-per-event</td><td><span class="chip plain">API</span></td></tr>
+          <tr><td><code>client/src/api/chat.ts</code></td><td><code>streamChat()</code>: AsyncGenerator SSE client with buffer parsing</td><td><span class="chip stream">client</span></td></tr>
+          <tr><td><code>client/src/pages/ChatPage.tsx</code></td><td>Chat UI: renders streaming text, tool indicators, suggestion chips</td><td><span class="chip">React</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer>
+      <p>Canteen Connect &mdash; SSE Streaming documentation. Part of the <a href="login-flow.html">login</a> &rarr; <a href="menu-management.html">menu</a> &rarr; <a href="ordering-flow.html">ordering</a> &rarr; <a href="ai-chat-flow.html">AI chat</a> &rarr; <strong>SSE streaming</strong> doc series.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>
