@@ -1,11 +1,13 @@
 using System.Text.Json;
+using Anthropic;
+using Anthropic.Models.Messages;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using CanteenApi.Data;
 
 namespace CanteenApi.Services;
 
-public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory scopeFactory, ILogger<AnalyticsService> logger)
+public class AnalyticsService(AnthropicClient client, IServiceScopeFactory scopeFactory, ILogger<AnalyticsService> logger)
 {
     private const string DbSchema = """
         Tables:
@@ -57,10 +59,17 @@ public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory 
 
     public async Task<AnalyticsResult> QueryAsync(string question, int? companyId, CancellationToken ct = default)
     {
-        ClaudeResponse response;
+        Message response;
+        var agentDef = BuildAgentDef(companyId);
         try
         {
-            response = await client.SendAsync(BuildAgentDef(companyId), [new { role = "user", content = question }], ct);
+            response = await client.Messages.Create(new MessageCreateParams
+            {
+                Model = agentDef.Model,
+                MaxTokens = agentDef.MaxTokens,
+                System = agentDef.SystemPrompt,
+                Messages = [new UserMessageParam { Content = question }]
+            }, ct);
         }
         catch (Exception ex) when (ex.Message.Contains("API key") || ex.Message.Contains("401") || ex.Message.Contains("authentication"))
         {
@@ -72,9 +81,13 @@ public class AnalyticsService(IClaudeMessageClient client, IServiceScopeFactory 
             return new AnalyticsResult { Error = "Failed to reach the AI service. Please try again." };
         }
 
-        var text = string.Join("", response.Content
-            .Where(b => b.Type == "text")
-            .Select(b => b.Text)).Trim();
+        var textParts = new List<string>();
+        foreach (var block in response.Content)
+        {
+            if (block.TryPickText(out var tb))
+                textParts.Add(tb.Text);
+        }
+        var text = string.Join("", textParts).Trim();
 
         if (text.StartsWith("```"))
         {

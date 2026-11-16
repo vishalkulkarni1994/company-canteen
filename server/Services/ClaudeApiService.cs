@@ -1,39 +1,37 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
+using Anthropic;
+using Anthropic.Models.Messages;
 
 namespace CanteenApi.Services;
 
-// ────────────────────────────────────────────────────────────────────────────
-// THE AGENTIC LOOP — the brain of the AI chat system.
-//
-// This service orchestrates multi-round conversations with Claude.
-// It does NOT make HTTP calls or know about the SDK — that's the job of
-// whichever IClaudeMessageClient is injected (HttpClaudeClient or SdkClaudeClient).
-//
-// Flow:
-//   1. Build the messages array (history + new user message)
-//   2. Call Claude via IClaudeMessageClient
-//   3. If Claude wants to use tools → execute them, add results, go to step 2
-//   4. If Claude is done → extract text and return
-//
-// The loop runs up to MaxToolRounds (10) times to prevent infinite loops.
-// In practice, a typical menu-browse-and-order takes 2-3 rounds.
-// ────────────────────────────────────────────────────────────────────────────
-
-public class ClaudeApiService(IClaudeMessageClient client, ILogger<ClaudeApiService> logger)
+public class ClaudeApiService(AnthropicClient client, ILogger<ClaudeApiService> logger)
 {
     private const int MaxToolRounds = 10;
 
-    /// <summary>
-    /// Sends a user query to Claude and handles tool calls in a loop.
-    /// Returns the final text response from Claude.
-    /// </summary>
-    /// <param name="query">The user's message</param>
-    /// <param name="agentDef">Agent config: model, system prompt, tools</param>
-    /// <param name="dispatchTool">Callback to execute tool calls (provided by ChatService)</param>
-    /// <param name="history">Previous conversation messages (for multi-turn chat)</param>
-    /// <param name="ct">Cancellation token</param>
+    private static readonly PropertyInfo? _propId =
+        typeof(ToolUseBlock).GetProperty("ID")
+        ?? typeof(ToolUseBlock).GetProperty("Id")
+        ?? typeof(ToolUseBlock).GetProperty("id");
+    private static readonly PropertyInfo? _propName =
+        typeof(ToolUseBlock).GetProperty("Name")
+        ?? typeof(ToolUseBlock).GetProperty("name");
+    private static readonly PropertyInfo? _propInput =
+        typeof(ToolUseBlock).GetProperty("Input")
+        ?? typeof(ToolUseBlock).GetProperty("input");
+
+    private static string GetToolUseId(ToolUseBlock b) =>
+        _propId?.GetValue(b)?.ToString()
+        ?? throw new InvalidOperationException("Cannot read ToolUseBlock.ID");
+    private static string GetToolUseName(ToolUseBlock b) =>
+        _propName?.GetValue(b)?.ToString()
+        ?? throw new InvalidOperationException("Cannot read ToolUseBlock.Name");
+    private static IReadOnlyDictionary<string, JsonElement>? GetToolUseInput(ToolUseBlock b) =>
+        _propInput?.GetValue(b) as IReadOnlyDictionary<string, JsonElement>;
+
     public async Task<string> SendAsync(
         string query,
         ClaudeAgentDefinition agentDef,
@@ -41,104 +39,111 @@ public class ClaudeApiService(IClaudeMessageClient client, ILogger<ClaudeApiServ
         List<ChatMessage>? history = null,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(query))
-            throw new ArgumentException("Query must not be empty.", nameof(query));
-
-        // ── STEP 1: Build the messages array ──
-        //   Start with conversation history, then add the new user message.
-        //   Claude needs the full conversation to maintain context.
-        var messages = new List<object>();
-        if (history != null)
+        try
         {
-            foreach (var msg in history)
-                messages.Add(new { role = msg.Role, content = msg.Content });
-        }
-        messages.Add(new { role = "user", content = query });
+            if (string.IsNullOrWhiteSpace(query))
+                throw new ArgumentException("Query must not be empty.", nameof(query));
 
-        string result = string.Empty;
-        long totalInput = 0, totalOutput = 0;
-        var sw = Stopwatch.StartNew();
-
-        // ── STEP 2: The agentic loop ──
-        //   Each iteration = one round-trip to Claude.
-        //   Claude either responds with text (done) or asks to use tools (continue).
-        for (var round = 0; round < MaxToolRounds; round++)
-        {
-            // Call Claude via whichever client is registered (HTTP or SDK).
-            // The client returns the same ClaudeResponse DTO either way.
-            var response = await client.SendAsync(agentDef, messages, ct);
-
-            // Track token usage across all rounds
-            totalInput += response.InputTokens;
-            totalOutput += response.OutputTokens;
-
-            // ── Check: Is Claude done or does it want to use tools? ──
-            if (response.StopReason != "tool_use")
+            var messages = new List<MessageParam>();
+            if (history != null)
             {
-                // Claude is done — extract all text blocks as the final answer
-                result = string.Join("\n", response.Content
-                    .Where(b => b.Type == "text")
-                    .Select(b => b.Text));
-                break;
-            }
-
-            // ── Claude wants to use tools — process them ──
-
-            // First, add Claude's response (with tool_use blocks) to the conversation.
-            // We serialize the content blocks back to objects for the messages array.
-            messages.Add(new
-            {
-                role = "assistant",
-                content = response.Content.Select(b => b.Type == "text"
-                    ? (object)new { type = "text", text = b.Text }
-                    : new { type = "tool_use", id = b.Id, name = b.Name, input = b.Input }
-                ).ToArray()
-            });
-
-            // Then execute each tool call and collect results
-            var toolResults = new List<object>();
-
-            foreach (var block in response.Content.Where(b => b.Type == "tool_use"))
-            {
-                logger.LogInformation("[AgentLoop] ToolCall. Tool={Tool} Round={Round}",
-                    block.Name, round);
-
-                // Call the dispatchTool callback (provided by ChatService).
-                // This is where canteen business logic runs (menu query, place order, etc.)
-                var toolResult = await dispatchTool(block.Name!, block.Input);
-
-                logger.LogInformation("[AgentLoop] ToolResult. Tool={Tool} ResultLen={Len}",
-                    block.Name, toolResult.Length);
-
-                // Wrap the result in the format Claude expects
-                toolResults.Add(new
+                foreach (var msg in history)
                 {
-                    type = "tool_result",
-                    tool_use_id = block.Id,
-                    content = toolResult
-                });
+                    if (msg.Role == "user")
+                        messages.Add(new UserMessageParam { Content = msg.Content });
+                    else if (msg.Role == "assistant")
+                        messages.Add(new AssistantMessageParam { Content = msg.Content });
+                }
+            }
+            messages.Add(new UserMessageParam { Content = query });
+
+            string result = string.Empty;
+            long totalInput = 0, totalOutput = 0;
+            var sw = Stopwatch.StartNew();
+
+            for (var round = 0; round < MaxToolRounds; round++)
+            {
+                var response = await client.Messages.Create(new MessageCreateParams
+                {
+                    Model = agentDef.Model,
+                    MaxTokens = agentDef.MaxTokens,
+                    System = agentDef.SystemPrompt,
+                    Tools = agentDef.Tools,
+                    Messages = messages
+                }, ct);
+
+                var u = response.Usage;
+                totalInput += u.InputTokens;
+                totalOutput += u.OutputTokens;
+
+                if (response.StopReason != "tool_use")
+                {
+                    var texts = new List<string>();
+                    foreach (var block in response.Content)
+                    {
+                        if (block.TryPickText(out var tb))
+                            texts.Add(tb.Text);
+                    }
+                    result = string.Join("\n", texts);
+                    break;
+                }
+
+                var assistantBlocks = new List<ContentBlockParam>();
+                foreach (var block in response.Content)
+                {
+                    if (block.TryPickText(out var tb))
+                        assistantBlocks.Add(new TextBlockParam { Text = tb.Text });
+                    else if (block.TryPickToolUse(out var tu))
+                        assistantBlocks.Add(new ToolUseBlockParam
+                        {
+                            ID = GetToolUseId(tu),
+                            Name = GetToolUseName(tu),
+                            Input = GetToolUseInput(tu) ?? new Dictionary<string, JsonElement>()
+                        });
+                }
+                messages.Add(new AssistantMessageParam { Content = assistantBlocks });
+
+                var toolResults = new List<ContentBlockParam>();
+                foreach (var block in response.Content)
+                {
+                    if (!block.TryPickToolUse(out var tu)) continue;
+                    var toolId = GetToolUseId(tu);
+                    var toolName = GetToolUseName(tu);
+
+                    logger.LogInformation("[AgentLoop] ToolCall. Tool={Tool} Round={Round}",
+                        toolName, round);
+
+                    var inputJson = JsonSerializer.Serialize(GetToolUseInput(tu));
+                    using var inputDoc = JsonDocument.Parse(inputJson);
+                    var toolResult = await dispatchTool(toolName, inputDoc.RootElement);
+
+                    logger.LogInformation("[AgentLoop] ToolResult. Tool={Tool} ResultLen={Len}",
+                        toolName, toolResult.Length);
+
+                    toolResults.Add(new ToolResultBlockParam
+                    {
+                        ToolUseID = toolId,
+                        Content = toolResult,
+                        IsError = false
+                    });
+                }
+                messages.Add(new UserMessageParam { Content = toolResults });
             }
 
-            // Add tool results as a "user" message — Claude's conversation protocol
-            // requires tool results to come from the user role
-            messages.Add(new { role = "user", content = toolResults.ToArray() });
+            sw.Stop();
+            logger.LogInformation(
+                "[AgentLoop] Complete. Model={Model} InputTokens={I} OutputTokens={O} DurationMs={D}",
+                agentDef.Model, totalInput, totalOutput, sw.ElapsedMilliseconds);
 
-            // Loop continues → next round sends everything back to Claude
+            return result;
         }
-
-        // ── STEP 3: Post-loop logging ──
-        sw.Stop();
-        logger.LogInformation(
-            "[AgentLoop] Complete. Model={Model} InputTokens={I} OutputTokens={O} DurationMs={D}",
-            agentDef.Model, totalInput, totalOutput, sw.ElapsedMilliseconds);
-
-        return result;
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[AgentLoop] SendAsync failed");
+            return ex.Message;
+        }
     }
 
-    /// <summary>
-    /// Streaming version of the agentic loop. Yields text deltas and tool status
-    /// events as they happen, executing tools between rounds.
-    /// </summary>
     public async IAsyncEnumerable<ClaudeStreamEvent> SendStreamAsync(
         string query,
         ClaudeAgentDefinition agentDef,
@@ -146,83 +151,161 @@ public class ClaudeApiService(IClaudeMessageClient client, ILogger<ClaudeApiServ
         List<ChatMessage>? history = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var messages = new List<object>();
+        var messages = new List<MessageParam>();
         if (history != null)
             foreach (var msg in history)
-                messages.Add(new { role = msg.Role, content = msg.Content });
-        messages.Add(new { role = "user", content = query });
+            {
+                if (msg.Role == "user")
+                    messages.Add(new UserMessageParam { Content = msg.Content });
+                else if (msg.Role == "assistant")
+                    messages.Add(new AssistantMessageParam { Content = msg.Content });
+            }
+        messages.Add(new UserMessageParam { Content = query });
 
         for (var round = 0; round < MaxToolRounds; round++)
         {
-            ClaudeResponse? roundResponse = null;
+            var toolBlocks = new List<AccumulatedToolUse>();
+            var textBlocks = new List<string>();
+            string stopReason = "end_turn";
+            var currentBlockType = "";
+            var currentBlockId = "";
+            var currentBlockName = "";
+            var inputJsonAccumulator = new StringBuilder();
+            var textAccumulator = new StringBuilder();
 
-            await foreach (var evt in client.SendStreamAsync(agentDef, messages, ct))
+            var stream = client.Messages.CreateStreaming(new MessageCreateParams
             {
-                if (evt.Type == StreamEventType.RoundComplete)
-                    roundResponse = evt.Response;
-                else
-                    yield return evt;
+                Model = agentDef.Model,
+                MaxTokens = agentDef.MaxTokens,
+                System = agentDef.SystemPrompt,
+                Tools = agentDef.Tools,
+                Messages = messages
+            }, ct);
+
+            await foreach (var evt in stream)
+            {
+                if (evt.TryPickContentBlockStart(out var startEvt))
+                {
+                    if (startEvt.ContentBlock.TryPickToolUse(out var tu))
+                    {
+                        currentBlockType = "tool_use";
+                        currentBlockId = GetToolUseId(tu);
+                        currentBlockName = GetToolUseName(tu);
+                        inputJsonAccumulator.Clear();
+                        yield return new ClaudeStreamEvent
+                        {
+                            Type = StreamEventType.ToolStart,
+                            ToolName = currentBlockName
+                        };
+                    }
+                    else
+                    {
+                        currentBlockType = "text";
+                        textAccumulator.Clear();
+                    }
+                }
+                else if (evt.TryPickContentBlockDelta(out var deltaEvt))
+                {
+                    if (deltaEvt.Delta.TryPickText(out var textDelta))
+                    {
+                        textAccumulator.Append(textDelta.Text);
+                        yield return new ClaudeStreamEvent
+                        {
+                            Type = StreamEventType.TextDelta,
+                            Text = textDelta.Text
+                        };
+                    }
+                    else if (deltaEvt.Delta.TryPickInputJson(out var jsonDelta))
+                    {
+                        inputJsonAccumulator.Append(jsonDelta.PartialJson);
+                    }
+                }
+                else if (evt.TryPickContentBlockStop(out _))
+                {
+                    if (currentBlockType == "tool_use")
+                    {
+                        toolBlocks.Add(new AccumulatedToolUse
+                        {
+                            Id = currentBlockId,
+                            Name = currentBlockName,
+                            InputJson = inputJsonAccumulator.ToString()
+                        });
+                    }
+                    else if (currentBlockType == "text")
+                    {
+                        textBlocks.Add(textAccumulator.ToString());
+                    }
+                }
+                else if (evt.TryPickDelta(out var msgDelta))
+                {
+                    stopReason = "end_turn"; // default; check msgDelta for actual stop_reason
+                }
+                else if (evt.TryPickStop(out _))
+                {
+                    if (toolBlocks.Count > 0)
+                        stopReason = "tool_use";
+                }
             }
 
-            if (roundResponse == null) break;
-
-            if (roundResponse.StopReason != "tool_use")
+            if (stopReason != "tool_use")
                 break;
 
-            // Add Claude's response to conversation
-            messages.Add(new
-            {
-                role = "assistant",
-                content = roundResponse.Content.Select(b => b.Type == "text"
-                    ? (object)new { type = "text", text = b.Text }
-                    : new { type = "tool_use", id = b.Id, name = b.Name, input = b.Input }
-                ).ToArray()
-            });
+            var assistantContent = new List<ContentBlockParam>();
+            foreach (var text in textBlocks)
+                assistantContent.Add(new TextBlockParam { Text = text });
 
-            // Execute tools and emit status events
-            var toolResults = new List<object>();
-            foreach (var block in roundResponse.Content.Where(b => b.Type == "tool_use"))
+            foreach (var tool in toolBlocks)
+            {
+                var parsedInput = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+                    string.IsNullOrEmpty(tool.InputJson) ? "{}" : tool.InputJson)
+                    ?? new Dictionary<string, JsonElement>();
+                assistantContent.Add(new ToolUseBlockParam
+                {
+                    ID = tool.Id,
+                    Name = tool.Name,
+                    Input = parsedInput
+                });
+            }
+            messages.Add(new AssistantMessageParam { Content = assistantContent });
+
+            var toolResults = new List<ContentBlockParam>();
+            foreach (var tool in toolBlocks)
             {
                 logger.LogInformation("[AgentLoop] ToolCall. Tool={Tool} Round={Round}",
-                    block.Name, round);
+                    tool.Name, round);
 
-                var toolResult = await dispatchTool(block.Name!, block.Input);
+                using var inputDoc = JsonDocument.Parse(tool.InputJson ?? "{}");
+                var toolResult = await dispatchTool(tool.Name, inputDoc.RootElement);
 
                 yield return new ClaudeStreamEvent
                 {
                     Type = StreamEventType.ToolDone,
-                    ToolName = block.Name
+                    ToolName = tool.Name
                 };
 
-                toolResults.Add(new
+                toolResults.Add(new ToolResultBlockParam
                 {
-                    type = "tool_result",
-                    tool_use_id = block.Id,
-                    content = toolResult
+                    ToolUseID = tool.Id,
+                    Content = toolResult,
+                    IsError = false
                 });
             }
-
-            messages.Add(new { role = "user", content = toolResults.ToArray() });
+            messages.Add(new UserMessageParam { Content = toolResults });
         }
+    }
+
+    private sealed class AccumulatedToolUse
+    {
+        public required string Id { get; init; }
+        public required string Name { get; init; }
+        public string InputJson { get; init; } = "{}";
     }
 }
 
-// ── Agent definition ──────────────────────────────────────────────────────
-// Holds everything needed to configure a Claude agent.
-// ChatService creates one of these with the canteen-specific config.
-// ClaudeApiService passes it to IClaudeMessageClient on every API call.
-
 public class ClaudeAgentDefinition
 {
-    /// <summary>Claude model ID (e.g. "claude-haiku-5-5")</summary>
     public required string Model { get; init; }
-
-    /// <summary>System prompt that defines the agent's personality and rules</summary>
     public required string SystemPrompt { get; init; }
-
-    /// <summary>Max tokens in Claude's response (default 1024)</summary>
     public int MaxTokens { get; init; } = 1024;
-
-    /// <summary>Tool definitions (JSON schema objects) Claude can call</summary>
-    public required object[] Tools { get; init; }
+    public required IReadOnlyList<ToolUnion> Tools { get; init; }
 }

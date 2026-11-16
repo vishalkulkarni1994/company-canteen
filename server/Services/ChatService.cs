@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Anthropic.Models.Messages;
 using Microsoft.EntityFrameworkCore;
 using CanteenApi.Data;
 using CanteenApi.Models;
@@ -149,48 +150,46 @@ public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeF
         return $"Order #{order.Id} placed successfully! Items: {string.Join(", ", orderItems)}. Total: ₹{order.TotalAmount}";
     }
 
-    private static object[] BuildToolDefinitions()
+    private static IReadOnlyList<ToolUnion> BuildToolDefinitions()
     {
         return
         [
-            new
+            new Tool
             {
-                name = "get_today_menu",
-                description = "Get today's available menu items with prices, categories, and remaining stock. Call this when the user asks what's available, wants to see the menu, or before placing an order.",
-                input_schema = new
+                Name = "get_today_menu",
+                Description = "Get today's available menu items with prices, categories, and remaining stock. Call this when the user asks what's available, wants to see the menu, or before placing an order.",
+                InputSchema = InputSchema.FromRawUnchecked(new Dictionary<string, JsonElement>
                 {
-                    type = "object",
-                    properties = new { },
-                    required = Array.Empty<string>()
-                }
+                    ["type"] = JsonSerializer.Deserialize<JsonElement>("\"object\""),
+                    ["properties"] = JsonSerializer.Deserialize<JsonElement>("{}"),
+                    ["required"] = JsonSerializer.Deserialize<JsonElement>("[]")
+                })
             },
-            new
+            new Tool
             {
-                name = "place_order",
-                description = "Place an order for the user. Each item needs a menuItemId and quantity. Only call this after confirming the order details with the user.",
-                input_schema = new
+                Name = "place_order",
+                Description = "Place an order for the user. Each item needs a menuItemId and quantity. Only call this after confirming the order details with the user.",
+                InputSchema = InputSchema.FromRawUnchecked(new Dictionary<string, JsonElement>
                 {
-                    type = "object",
-                    properties = new
-                    {
-                        items = new
+                    ["type"] = JsonSerializer.Deserialize<JsonElement>("\"object\""),
+                    ["properties"] = JsonSerializer.Deserialize<JsonElement>("""
                         {
-                            type = "array",
-                            description = "List of items to order",
-                            items = new
-                            {
-                                type = "object",
-                                properties = new
-                                {
-                                    menuItemId = new { type = "integer", description = "The menu item ID" },
-                                    quantity = new { type = "integer", description = "How many to order" }
-                                },
-                                required = new[] { "menuItemId", "quantity" }
+                            "items": {
+                                "type": "array",
+                                "description": "List of items to order",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "menuItemId": { "type": "integer", "description": "The menu item ID" },
+                                        "quantity": { "type": "integer", "description": "How many to order" }
+                                    },
+                                    "required": ["menuItemId", "quantity"]
+                                }
                             }
                         }
-                    },
-                    required = new[] { "items" }
-                }
+                    """),
+                    ["required"] = JsonSerializer.Deserialize<JsonElement>("""["items"]""")
+                })
             }
         ];
     }

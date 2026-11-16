@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Design — Company Canteen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #fafaf9;
+    --bg-surface: #ffffff;
+    --bg-code: #f5f3f0;
+    --fg: #1c1917;
+    --fg-muted: #78716c;
+    --fg-subtle: #a8a29e;
+    --accent: #c2410c;
+    --accent-soft: #fed7aa;
+    --accent-bg: #fff7ed;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --success: #15803d;
+    --success-bg: #dcfce7;
+    --info: #0369a1;
+    --info-bg: #e0f2fe;
+    --warn: #a16207;
+    --warn-bg: #fef9c3;
+    --purple: #7c3aed;
+    --purple-bg: #f5f3ff;
+    --teal: #0d9488;
+    --teal-bg: #f0fdfa;
+    --diagram-bg: #fefcfb;
+    --shadow: 0 1px 3px rgba(28,25,23,0.06), 0 1px 2px rgba(28,25,23,0.04);
+    --shadow-lg: 0 4px 12px rgba(28,25,23,0.08), 0 2px 4px rgba(28,25,23,0.04);
+    --radius: 10px;
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1614;
+      --bg-surface: #231f1d;
+      --bg-code: #2a2623;
+      --fg: #e7e5e4;
+      --fg-muted: #a8a29e;
+      --fg-subtle: #78716c;
+      --accent: #f97316;
+      --accent-soft: #7c2d12;
+      --accent-bg: #2a1f14;
+      --border: #3b3633;
+      --border-strong: #57534e;
+      --success: #4ade80;
+      --success-bg: #14201a;
+      --info: #38bdf8;
+      --info-bg: #0c1929;
+      --warn: #fbbf24;
+      --warn-bg: #27200e;
+      --purple: #a78bfa;
+      --purple-bg: #1e1633;
+      --teal: #2dd4bf;
+      --teal-bg: #0f2926;
+      --diagram-bg: #211d1b;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .top-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    padding: 0 24px;
+  }
+  .top-nav-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; gap: 24px; height: 56px;
+    overflow-x: auto;
+  }
+  .top-nav a {
+    color: var(--fg-muted); text-decoration: none; font-size: 13px;
+    font-weight: 500; white-space: nowrap; padding: 4px 0;
+    border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s;
+  }
+  .top-nav a:hover, .top-nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-logo {
+    font-family: var(--font-display); font-weight: 700; font-size: 16px;
+    color: var(--fg) !important; border-bottom: none !important; margin-right: 8px;
+  }
+
+  .hero { padding: 72px 24px 56px; text-align: center; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-bg); color: var(--accent);
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; padding: 5px 14px; border-radius: 20px; margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: var(--font-display); font-size: clamp(32px, 5vw, 52px);
+    font-weight: 700; line-height: 1.15; margin-bottom: 16px;
+  }
+  .hero p { color: var(--fg-muted); font-size: 17px; max-width: 640px; margin: 0 auto; }
+
+  section { padding: 56px 24px; border-top: 1px solid var(--border); }
+  .section-inner { max-width: 1200px; margin: 0 auto; }
+  .section-label {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 8px;
+  }
+  h2 {
+    font-family: var(--font-display); font-size: clamp(24px, 3.5vw, 32px);
+    font-weight: 700; line-height: 1.2; margin-bottom: 12px; text-wrap: balance;
+  }
+  h3 { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 10px; margin-top: 28px; }
+  h4 { font-family: var(--font-display); font-size: 16px; font-weight: 600; margin-bottom: 8px; margin-top: 20px; }
+  .section-desc { color: var(--fg-muted); max-width: 720px; margin-bottom: 32px; }
+  p + p { margin-top: 12px; }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 24px; }
+  .card {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); transition: box-shadow 0.2s;
+  }
+  .card:hover { box-shadow: var(--shadow-lg); }
+  .card-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px;
+  }
+  .card h4 { margin-top: 0; margin-bottom: 8px; }
+  .card p { color: var(--fg-muted); font-size: 14px; line-height: 1.6; }
+
+  .diagram-container {
+    background: var(--diagram-bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 32px; margin: 24px 0; overflow-x: auto;
+  }
+  .diagram-container svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  .diagram-caption { text-align: center; color: var(--fg-muted); font-size: 13px; margin-top: 12px; font-style: italic; }
+
+  .table-wrap { overflow-x: auto; margin: 20px 0; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead { background: var(--bg-code); }
+  th {
+    text-align: left; padding: 10px 16px; font-weight: 600; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-muted);
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--accent-bg); }
+
+  code {
+    font-family: var(--font-mono); font-size: 13px;
+    background: var(--bg-code); padding: 2px 6px; border-radius: 4px; color: var(--accent);
+  }
+  pre {
+    background: var(--bg-code); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; overflow-x: auto; margin: 16px 0;
+    font-size: 13px; line-height: 1.6;
+  }
+  pre code { background: transparent; padding: 0; color: var(--fg); }
+
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 12px; letter-spacing: 0.02em;
+  }
+  .tag-green  { background: var(--success-bg); color: var(--success); }
+  .tag-blue   { background: var(--info-bg);    color: var(--info); }
+  .tag-orange { background: var(--accent-bg);  color: var(--accent); }
+  .tag-purple { background: var(--purple-bg);  color: var(--purple); }
+  .tag-teal   { background: var(--teal-bg);    color: var(--teal); }
+
+  .feature-list { list-style: none; margin: 16px 0; }
+  .feature-list li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .feature-list li::before {
+    content: ''; position: absolute; left: 4px; top: 14px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent-soft); border: 2px solid var(--accent);
+  }
+
+  .concept-box {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-left: 4px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 20px 24px; margin: 20px 0;
+  }
+  .concept-box.info    { border-left-color: var(--info); }
+  .concept-box.success { border-left-color: var(--success); }
+  .concept-box.purple  { border-left-color: var(--purple); }
+  .concept-box strong  { font-weight: 600; }
+
+  .flow-steps { display: flex; flex-direction: column; gap: 0; margin: 24px 0; }
+  .flow-step { display: flex; gap: 16px; padding: 16px 0; }
+  .flow-step-num {
+    flex-shrink: 0; width: 36px; height: 36px;
+    background: var(--accent); color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 14px; position: relative;
+  }
+  .flow-step:not(:last-child) .flow-step-num::after {
+    content: ''; position: absolute; top: 36px; left: 50%; transform: translateX(-50%);
+    width: 2px; height: calc(100% + 16px); background: var(--border);
+  }
+  .flow-step-content { min-width: 0; padding-top: 6px; }
+  .flow-step-content strong { display: block; margin-bottom: 4px; }
+  .flow-step-content p { color: var(--fg-muted); font-size: 14px; margin: 0; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0; }
+  @media (max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+    .card-grid { grid-template-columns: 1fr; }
+  }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 32px 24px;
+    text-align: center; color: var(--fg-subtle); font-size: 13px;
+  }
+  @media (max-width: 600px) {
+    .hero { padding: 48px 16px 36px; }
+    section { padding: 36px 16px; }
+    .diagram-container { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <a href="#" class="nav-logo">System Design</a>
+    <a href="#what-is">What Is It?</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#database">Database</a>
+    <a href="#api">API Design</a>
+    <a href="#auth">Auth</a>
+    <a href="#multi-tenant">Multi-Tenancy</a>
+    <a href="#ai">AI Integration</a>
+    <a href="#data-flow">Data Flow</a>
+    <a href="#scalability">Scalability</a>
+    <a href="#tradeoffs">Trade-offs</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-badge">Interview Prep Guide</div>
+  <h1>System Design of a Multi-Tenant Company Canteen</h1>
+  <p>A complete walkthrough of how to design a real-world food ordering platform &mdash; from high-level architecture to database schemas, API contracts, authentication, AI-powered features, and scalability trade-offs.</p>
+</header>
+
+<!-- ═══ WHAT IS SYSTEM DESIGN ═══ -->
+<section id="what-is">
+  <div class="section-inner">
+    <span class="section-label">Fundamentals</span>
+    <h2>What Is System Design?</h2>
+    <p class="section-desc">System design is the process of defining the architecture, components, modules, interfaces, and data flows of a system to satisfy specified requirements. In interviews, it tests your ability to think at scale about real-world engineering problems.</p>
+
+    <div class="concept-box">
+      <strong>In an interview context:</strong> You're given a vague problem ("Design a food ordering system for corporate canteens") and expected to work through requirements, propose an architecture, design data models, define APIs, and discuss trade-offs &mdash; all within 45&ndash;60 minutes. The goal isn't a perfect answer; it's demonstrating structured thinking.
+    </div>
+
+    <h3>The System Design Framework</h3>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-step-num">1</div>
+        <div class="flow-step-content">
+          <strong>Clarify Requirements</strong>
+          <p>Ask questions. Who are the users? What's the scale? What are the must-have features vs. nice-to-haves? Functional requirements (ordering, menus) vs. non-functional (latency, availability, consistency).</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">2</div>
+        <div class="flow-step-content">
+          <strong>Estimate Scale</strong>
+          <p>How many users? Orders per day? Data size? Read-to-write ratio? These numbers drive every architectural decision &mdash; a system serving 100 users is designed very differently from one serving 100,000.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">3</div>
+        <div class="flow-step-content">
+          <strong>Define High-Level Architecture</strong>
+          <p>Draw the big boxes: clients, load balancers, API servers, databases, caches, message queues, third-party services. Show how data flows between them.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">4</div>
+        <div class="flow-step-content">
+          <strong>Design Core Components</strong>
+          <p>Dive deep into 2&ndash;3 critical components. Design database schemas, define API contracts, work out state machines for order status, discuss authentication strategy.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">5</div>
+        <div class="flow-step-content">
+          <strong>Address Bottlenecks &amp; Trade-offs</strong>
+          <p>Discuss scaling strategies, caching, database indexing, consistency vs. availability. Every choice has a trade-off &mdash; show you understand both sides.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Key Concepts That Appear in Every Design</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background:var(--info-bg);color:var(--info)">&#x2194;</div>
+        <h4>Horizontal vs. Vertical Scaling</h4>
+        <p><strong>Vertical:</strong> bigger machine (more CPU/RAM). <strong>Horizontal:</strong> more machines behind a load balancer. Horizontal is harder but gives better availability and fault tolerance.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--success-bg);color:var(--success)">&#x26A1;</div>
+        <h4>CAP Theorem</h4>
+        <p>In a distributed system, you can only guarantee two of three: <strong>Consistency</strong>, <strong>Availability</strong>, <strong>Partition tolerance</strong>. Most web apps choose AP with eventual consistency.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--accent-bg);color:var(--accent)">&#x1F4E6;</div>
+        <h4>Caching</h4>
+        <p>Store frequently accessed data in memory (Redis, Memcached). Reduces database load and latency. Key decisions: cache invalidation strategy, TTL, what to cache vs. what to always fetch fresh.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--purple-bg);color:var(--purple)">&#x1F512;</div>
+        <h4>Authentication &amp; Authorization</h4>
+        <p>Who are you (AuthN) vs. what can you do (AuthZ). JWT tokens, OAuth, RBAC (Role-Based Access Control). Stateless tokens scale well but can't be revoked easily.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--teal-bg);color:var(--teal)">&#x1F5C4;</div>
+        <h4>Database Design</h4>
+        <p>SQL vs. NoSQL, normalization, indexing, sharding. SQL gives you ACID transactions (important for orders + money). NoSQL gives flexible schemas and horizontal scaling.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--warn-bg);color:var(--warn)">&#x1F4AC;</div>
+        <h4>Real-Time Communication</h4>
+        <p>WebSockets for bidirectional. Server-Sent Events (SSE) for server-to-client streaming. Long polling as a fallback. Choose based on whether the client needs to push data back.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ARCHITECTURE ═══ -->
+<section id="architecture">
+  <div class="section-inner">
+    <span class="section-label">High-Level Design</span>
+    <h2>System Architecture</h2>
+    <p class="section-desc">Our canteen system follows a client-server architecture with a .NET 10 Web API backend, dual frontend clients (React + Angular), SQLite database, and Claude AI integration for intelligent features.</p>
+
+    <h3>Functional Requirements</h3>
+    <div class="two-col">
+      <div>
+        <h4>User-Facing</h4>
+        <ul class="feature-list">
+          <li>Register &amp; login (per company)</li>
+          <li>Browse today's available menu</li>
+          <li>Place orders with real-time stock checks</li>
+          <li>Track order status (Placed &rarr; Ready &rarr; Collected)</li>
+          <li>AI chat assistant for ordering help</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Admin-Facing</h4>
+        <ul class="feature-list">
+          <li>Manage menu items (CRUD)</li>
+          <li>Set daily stock quantities</li>
+          <li>Kitchen dashboard for order management</li>
+          <li>AI-powered analytics (Text-to-SQL)</li>
+          <li>Multi-company management (SuperAdmin)</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Non-Functional Requirements</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Requirement</th><th>Target</th><th>Approach</th></tr></thead>
+        <tbody>
+          <tr><td>Availability</td><td>99.9% uptime</td><td>Stateless API servers, database replication</td></tr>
+          <tr><td>Latency</td><td>&lt; 200ms for API calls</td><td>Indexed queries, connection pooling</td></tr>
+          <tr><td>Consistency</td><td>Strong for orders &amp; stock</td><td>ACID transactions, optimistic concurrency</td></tr>
+          <tr><td>Security</td><td>Data isolation per company</td><td>JWT auth, RBAC, tenant-scoped queries</td></tr>
+          <tr><td>Scalability</td><td>100+ companies, 10K+ users</td><td>Horizontal API scaling, database partitioning</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>High-Level Architecture Diagram</h3>
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" fill="none">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border-strong)"/>
+          </marker>
+        </defs>
+
+        <rect x="30" y="30" width="170" height="70" rx="10" fill="var(--info-bg)" stroke="var(--info)" stroke-width="1.5"/>
+        <text x="115" y="58" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--info)">React Client</text>
+        <text x="115" y="78" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">:5173</text>
+
+        <rect x="220" y="30" width="170" height="70" rx="10" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="1.5"/>
+        <text x="305" y="58" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--purple)">Angular Client</text>
+        <text x="305" y="78" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">:4200</text>
+
+        <line x1="115" y1="100" x2="115" y2="140" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="305" y1="100" x2="305" y2="140" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arr)"/>
+        <text x="210" y="128" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">HTTP + CORS</text>
+
+        <rect x="40" y="145" width="370" height="80" rx="12" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="225" y="172" text-anchor="middle" font-family="var(--font-display)" font-size="15" font-weight="700" fill="var(--accent)">.NET 10 Web API</text>
+        <text x="225" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">:5230 &mdash; Controllers + Services + Middleware</text>
+
+        <rect x="460" y="30" width="470" height="195" rx="12" fill="var(--bg-surface)" stroke="var(--border)" stroke-width="1.5"/>
+        <text x="695" y="56" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="600" fill="var(--fg)">API Layer Breakdown</text>
+        <rect x="475" y="72" width="100" height="32" rx="6" fill="var(--info-bg)" stroke="var(--info)" stroke-width="1"/>
+        <text x="525" y="93" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--info)">Auth</text>
+        <rect x="585" y="72" width="100" height="32" rx="6" fill="var(--success-bg)" stroke="var(--success)" stroke-width="1"/>
+        <text x="635" y="93" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--success)">Menu</text>
+        <rect x="695" y="72" width="100" height="32" rx="6" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="1"/>
+        <text x="745" y="93" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--warn)">Stock</text>
+        <rect x="805" y="72" width="110" height="32" rx="6" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1"/>
+        <text x="860" y="93" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent)">Order</text>
+        <rect x="475" y="115" width="100" height="32" rx="6" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="1"/>
+        <text x="525" y="136" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--teal)">Chat</text>
+        <rect x="585" y="115" width="100" height="32" rx="6" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="1"/>
+        <text x="635" y="136" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--purple)">Analytics</text>
+        <rect x="695" y="115" width="100" height="32" rx="6" fill="var(--info-bg)" stroke="var(--info)" stroke-width="1"/>
+        <text x="745" y="136" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--info)">Company</text>
+        <text x="695" y="170" text-anchor="middle" font-family="var(--font-display)" font-size="12" font-weight="600" fill="var(--fg-muted)">Services</text>
+        <text x="565" y="192" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">AuthService</text>
+        <text x="665" y="192" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">ChatService</text>
+        <text x="780" y="192" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">AnalyticsService</text>
+        <text x="900" y="192" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">ClaudeApiService</text>
+        <line x1="410" y1="185" x2="460" y2="185" stroke="var(--border-strong)" stroke-width="1.5" stroke-dasharray="4"/>
+
+        <rect x="40" y="290" width="175" height="70" rx="10" fill="var(--success-bg)" stroke="var(--success)" stroke-width="1.5"/>
+        <text x="128" y="318" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--success)">SQLite Database</text>
+        <text x="128" y="338" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">canteen.db</text>
+        <text x="128" y="268" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">EF Core ORM</text>
+        <line x1="128" y1="225" x2="128" y2="290" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <rect x="265" y="290" width="175" height="70" rx="10" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="1.5"/>
+        <text x="353" y="318" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--purple)">Claude AI (Haiku)</text>
+        <text x="353" y="338" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Anthropic SDK</text>
+        <text x="300" y="268" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">Anthropic C# SDK</text>
+        <line x1="300" y1="225" x2="353" y2="290" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <rect x="490" y="290" width="175" height="70" rx="10" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="1.5"/>
+        <text x="578" y="318" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--warn)">JWT Auth</text>
+        <text x="578" y="338" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">HMAC-SHA256</text>
+
+        <rect x="715" y="290" width="175" height="70" rx="10" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="1.5"/>
+        <text x="803" y="318" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--teal)">SSE Streaming</text>
+        <text x="803" y="338" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">text/event-stream</text>
+
+        <rect x="40" y="410" width="900" height="130" rx="12" fill="var(--bg-surface)" stroke="var(--border)" stroke-width="1.5"/>
+        <text x="490" y="437" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="600" fill="var(--fg)">Database Entities</text>
+        <rect x="60"  y="455" width="120" height="36" rx="6" fill="var(--info-bg)" stroke="var(--info)" stroke-width="1"/>
+        <text x="120" y="478" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--info)">Company</text>
+        <rect x="200" y="455" width="120" height="36" rx="6" fill="var(--success-bg)" stroke="var(--success)" stroke-width="1"/>
+        <text x="260" y="478" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--success)">User</text>
+        <rect x="340" y="455" width="120" height="36" rx="6" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="1"/>
+        <text x="400" y="478" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--warn)">MenuItem</text>
+        <rect x="480" y="455" width="120" height="36" rx="6" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1"/>
+        <text x="540" y="478" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--accent)">DailyStock</text>
+        <rect x="620" y="455" width="120" height="36" rx="6" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="1"/>
+        <text x="680" y="478" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--purple)">Order</text>
+        <rect x="760" y="455" width="120" height="36" rx="6" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="1"/>
+        <text x="820" y="478" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--teal)">OrderItem</text>
+        <text x="180" y="515" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">1 : N</text>
+        <text x="320" y="515" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">1 : N</text>
+        <text x="460" y="515" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">1 : N</text>
+        <text x="600" y="515" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">1 : N</text>
+        <text x="740" y="515" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-subtle)">1 : N</text>
+
+        <line x1="128" y1="360" x2="128" y2="410" stroke="var(--border-strong)" stroke-width="1.5" marker-end="url(#arr)"/>
+      </svg>
+      <p class="diagram-caption">High-level architecture showing clients, API server, database, and external services</p>
+    </div>
+
+    <h3>Technology Stack</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th><th>Why This Choice</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-blue">Backend</span></td><td>.NET 10, C#, ASP.NET Core</td><td>Type-safe, high performance, built-in DI, excellent ORM support</td></tr>
+          <tr><td><span class="tag tag-green">Database</span></td><td>SQLite + EF Core</td><td>Zero-config, file-based. Easy migration to PostgreSQL later</td></tr>
+          <tr><td><span class="tag tag-orange">Frontend 1</span></td><td>React 19, TypeScript, Vite</td><td>Component-based UI, massive ecosystem, fast HMR</td></tr>
+          <tr><td><span class="tag tag-purple">Frontend 2</span></td><td>Angular 19, TypeScript</td><td>Enterprise-grade, built-in routing/forms/HTTP</td></tr>
+          <tr><td><span class="tag tag-teal">AI</span></td><td>Anthropic C# SDK (Claude Haiku)</td><td>Official SDK, tool-use support, streaming, cost-effective</td></tr>
+          <tr><td><span class="tag tag-blue">Auth</span></td><td>JWT (HMAC-SHA256)</td><td>Stateless tokens, no session storage needed</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DATABASE ═══ -->
+<section id="database">
+  <div class="section-inner">
+    <span class="section-label">Data Layer</span>
+    <h2>Database Design</h2>
+    <p class="section-desc">The database is normalized to 3NF with six core entities. Every table is scoped to a company through direct or transitive foreign keys, enabling the multi-tenant data isolation model.</p>
+
+    <h3>Entity-Relationship Diagram</h3>
+    <div class="diagram-container">
+      <svg viewBox="0 0 880 520" xmlns="http://www.w3.org/2000/svg" fill="none">
+        <rect x="330" y="20" width="220" height="110" rx="10" fill="var(--info-bg)" stroke="var(--info)" stroke-width="2"/>
+        <text x="440" y="46" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="var(--info)">Company</text>
+        <line x1="345" y1="56" x2="535" y2="56" stroke="var(--info)" stroke-width="0.5" opacity="0.4"/>
+        <text x="355" y="74" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Id         int PK</text>
+        <text x="355" y="90" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Name       string UNIQUE</text>
+        <text x="355" y="106" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">CreatedAt  DateTime</text>
+
+        <rect x="30" y="200" width="240" height="150" rx="10" fill="var(--success-bg)" stroke="var(--success)" stroke-width="2"/>
+        <text x="150" y="226" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="var(--success)">User</text>
+        <line x1="45" y1="236" x2="255" y2="236" stroke="var(--success)" stroke-width="0.5" opacity="0.4"/>
+        <text x="45" y="254" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Id            int PK</text>
+        <text x="45" y="270" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Email         string UNIQUE</text>
+        <text x="45" y="286" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">PasswordHash  string</text>
+        <text x="45" y="302" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Name          string</text>
+        <text x="45" y="318" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Role          string</text>
+        <text x="45" y="334" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">CompanyId     int? FK</text>
+
+        <rect x="610" y="200" width="240" height="165" rx="10" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="2"/>
+        <text x="730" y="226" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="var(--warn)">MenuItem</text>
+        <line x1="625" y1="236" x2="835" y2="236" stroke="var(--warn)" stroke-width="0.5" opacity="0.4"/>
+        <text x="625" y="254" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Id           int PK</text>
+        <text x="625" y="270" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Name         string</text>
+        <text x="625" y="286" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Price        decimal(8,2)</text>
+        <text x="625" y="302" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Category     string</text>
+        <text x="625" y="318" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">IsActive     bool</text>
+        <text x="625" y="334" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">CompanyId    int FK</text>
+        <text x="625" y="350" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">ImageUrl     string?</text>
+
+        <rect x="610" y="410" width="240" height="100" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="730" y="436" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="var(--accent)">DailyStock</text>
+        <line x1="625" y1="446" x2="835" y2="446" stroke="var(--accent)" stroke-width="0.5" opacity="0.4"/>
+        <text x="625" y="464" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">MenuItemId + Date  UNIQUE</text>
+        <text x="625" y="480" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">QuantityAvailable   int</text>
+        <text x="625" y="496" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">QuantityOrdered     int</text>
+
+        <rect x="30" y="400" width="240" height="115" rx="10" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="2"/>
+        <text x="150" y="426" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="var(--purple)">Order</text>
+        <line x1="45" y1="436" x2="255" y2="436" stroke="var(--purple)" stroke-width="0.5" opacity="0.4"/>
+        <text x="45" y="454" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">UserId       int FK</text>
+        <text x="45" y="470" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">CompanyId    int FK</text>
+        <text x="45" y="486" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Status       string</text>
+        <text x="45" y="502" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">TotalAmount  decimal(10,2)</text>
+
+        <rect x="320" y="420" width="240" height="95" rx="10" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="2"/>
+        <text x="440" y="446" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="700" fill="var(--teal)">OrderItem</text>
+        <line x1="335" y1="456" x2="545" y2="456" stroke="var(--teal)" stroke-width="0.5" opacity="0.4"/>
+        <text x="335" y="474" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">OrderId     int FK</text>
+        <text x="335" y="490" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">MenuItemId  int FK</text>
+        <text x="335" y="506" font-family="var(--font-mono)" font-size="11" fill="var(--fg-muted)">Quantity int, UnitPrice decimal</text>
+
+        <line x1="340" y1="100" x2="150" y2="200" stroke="var(--fg-subtle)" stroke-width="1.5"/>
+        <text x="230" y="155" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="600" fill="var(--fg-subtle)">1 : N</text>
+        <line x1="540" y1="100" x2="730" y2="200" stroke="var(--fg-subtle)" stroke-width="1.5"/>
+        <text x="650" y="155" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="600" fill="var(--fg-subtle)">1 : N</text>
+        <line x1="150" y1="350" x2="150" y2="400" stroke="var(--fg-subtle)" stroke-width="1.5"/>
+        <text x="170" y="380" font-family="var(--font-mono)" font-size="10" font-weight="600" fill="var(--fg-subtle)">1 : N</text>
+        <line x1="270" y1="460" x2="320" y2="460" stroke="var(--fg-subtle)" stroke-width="1.5"/>
+        <text x="295" y="453" font-family="var(--font-mono)" font-size="10" font-weight="600" fill="var(--fg-subtle)">1:N</text>
+        <line x1="730" y1="365" x2="730" y2="410" stroke="var(--fg-subtle)" stroke-width="1.5"/>
+        <text x="760" y="392" font-family="var(--font-mono)" font-size="10" font-weight="600" fill="var(--fg-subtle)">1 : N</text>
+        <line x1="610" y1="330" x2="550" y2="440" stroke="var(--fg-subtle)" stroke-width="1.5" stroke-dasharray="4"/>
+        <text x="592" y="392" font-family="var(--font-mono)" font-size="10" font-weight="600" fill="var(--fg-subtle)">1:N</text>
+      </svg>
+      <p class="diagram-caption">Entity-relationship diagram &mdash; Company is the tenant root; all data flows through it</p>
+    </div>
+
+    <h3>Key Design Decisions</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h4>Soft Deletes for Menu Items</h4>
+        <p>Menu items use an <code>IsActive</code> flag instead of hard deletes. This preserves order history &mdash; if you delete "Chicken Biryani" after 500 people ordered it, those order records still reference a valid item.</p>
+      </div>
+      <div class="card">
+        <h4>Daily Stock as a Separate Entity</h4>
+        <p>Stock is date-scoped (<code>MenuItemId + Date</code> unique constraint) rather than a field on MenuItem. This lets admins set stock per day and keeps a historical record.</p>
+      </div>
+      <div class="card">
+        <h4>Nullable CompanyId on User</h4>
+        <p>SuperAdmin users have <code>CompanyId = null</code> because they operate across all companies. Regular users always belong to exactly one company.</p>
+      </div>
+      <div class="card">
+        <h4>Price Snapshot on OrderItem</h4>
+        <p><code>UnitPrice</code> is captured at order time, so price changes don't affect historical orders. <code>Subtotal</code> is computed (<code>Quantity * UnitPrice</code>), not stored.</p>
+      </div>
+    </div>
+
+    <h3>Indexing Strategy</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Index</th><th>On</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>UNIQUE</td><td><code>Company.Name</code></td><td>No duplicate company names</td></tr>
+          <tr><td>UNIQUE</td><td><code>User.Email</code></td><td>Login lookups, uniqueness constraint</td></tr>
+          <tr><td>UNIQUE</td><td><code>DailyStock(MenuItemId, Date)</code></td><td>One stock entry per item per day</td></tr>
+          <tr><td>FK Index</td><td><code>MenuItem.CompanyId</code></td><td>Tenant-scoped menu queries</td></tr>
+          <tr><td>FK Index</td><td><code>Order.CompanyId</code></td><td>Tenant-scoped order queries</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ API ═══ -->
+<section id="api">
+  <div class="section-inner">
+    <span class="section-label">Interface Layer</span>
+    <h2>API Design</h2>
+    <p class="section-desc">RESTful API with 7 controllers, following resource-based URL naming, proper HTTP status codes, and consistent response shapes. All endpoints except login/register require JWT authentication.</p>
+
+    <h3>API Endpoints</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/auth/register</code></td><td>Public</td><td>Register new user under a company</td></tr>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/auth/login</code></td><td>Public</td><td>Login, returns JWT token</td></tr>
+          <tr><td><span class="tag tag-blue">GET</span></td><td><code>/api/auth/me</code></td><td>Any</td><td>Current user profile</td></tr>
+          <tr><td><span class="tag tag-blue">GET</span></td><td><code>/api/auth/companies</code></td><td>Public</td><td>List companies for registration</td></tr>
+          <tr><td colspan="4" style="background:var(--bg-code);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--fg-muted)">Menu Management</td></tr>
+          <tr><td><span class="tag tag-blue">GET</span></td><td><code>/api/menu</code></td><td>Any</td><td>List menu items (company-scoped)</td></tr>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/menu</code></td><td>Admin</td><td>Create menu item</td></tr>
+          <tr><td><span class="tag tag-orange">PUT</span></td><td><code>/api/menu/{id}</code></td><td>Admin</td><td>Update menu item</td></tr>
+          <tr><td><span class="tag tag-purple">DEL</span></td><td><code>/api/menu/{id}</code></td><td>Admin</td><td>Soft-delete menu item</td></tr>
+          <tr><td colspan="4" style="background:var(--bg-code);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--fg-muted)">Stock Management</td></tr>
+          <tr><td><span class="tag tag-blue">GET</span></td><td><code>/api/stock/today</code></td><td>Any</td><td>Today's available items + quantities</td></tr>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/stock</code></td><td>Admin</td><td>Set stock for a single item</td></tr>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/stock/batch</code></td><td>Admin</td><td>Set stock for multiple items</td></tr>
+          <tr><td colspan="4" style="background:var(--bg-code);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--fg-muted)">Orders</td></tr>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/order</code></td><td>User</td><td>Place order (validates stock atomically)</td></tr>
+          <tr><td><span class="tag tag-blue">GET</span></td><td><code>/api/order/my</code></td><td>User</td><td>My order history</td></tr>
+          <tr><td><span class="tag tag-blue">GET</span></td><td><code>/api/order/active</code></td><td>Admin</td><td>All active orders (kitchen view)</td></tr>
+          <tr><td><span class="tag tag-orange">PUT</span></td><td><code>/api/order/{id}/status</code></td><td>Admin</td><td>Update order status (state machine)</td></tr>
+          <tr><td><span class="tag tag-purple">DEL</span></td><td><code>/api/order/{id}</code></td><td>Owner</td><td>Cancel order (only if "Placed")</td></tr>
+          <tr><td colspan="4" style="background:var(--bg-code);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--fg-muted)">AI Features</td></tr>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/chat</code></td><td>User</td><td>AI chat (non-streaming)</td></tr>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/chat/stream</code></td><td>User</td><td>AI chat with SSE streaming</td></tr>
+          <tr><td><span class="tag tag-green">POST</span></td><td><code>/api/analytics/query</code></td><td>Admin</td><td>Natural language analytics (Text-to-SQL)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Order State Machine</h3>
+    <div class="concept-box info">
+      <p>Orders follow a strict state machine with only forward transitions. This prevents invalid states and makes the kitchen workflow predictable.</p>
+    </div>
+    <div class="diagram-container">
+      <svg viewBox="0 0 720 120" xmlns="http://www.w3.org/2000/svg" fill="none">
+        <defs>
+          <marker id="arr2" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--fg-subtle)"/></marker>
+          <marker id="arr3" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/></marker>
+        </defs>
+        <rect x="10" y="35" width="110" height="50" rx="25" fill="var(--info-bg)" stroke="var(--info)" stroke-width="2"/>
+        <text x="65" y="65" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--info)">Placed</text>
+        <rect x="185" y="35" width="120" height="50" rx="25" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="2"/>
+        <text x="245" y="65" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--warn)">Preparing</text>
+        <rect x="370" y="35" width="110" height="50" rx="25" fill="var(--success-bg)" stroke="var(--success)" stroke-width="2"/>
+        <text x="425" y="65" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--success)">Ready</text>
+        <rect x="545" y="35" width="120" height="50" rx="25" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="2"/>
+        <text x="605" y="65" text-anchor="middle" font-family="var(--font-display)" font-size="13" font-weight="600" fill="var(--teal)">Collected</text>
+        <rect x="100" y="0" width="110" height="30" rx="15" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="155" y="20" text-anchor="middle" font-family="var(--font-display)" font-size="11" font-weight="600" fill="var(--accent)">Cancelled</text>
+        <line x1="120" y1="60" x2="185" y2="60" stroke="var(--fg-subtle)" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <line x1="305" y1="60" x2="370" y2="60" stroke="var(--fg-subtle)" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <line x1="480" y1="60" x2="545" y2="60" stroke="var(--fg-subtle)" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <line x1="65" y1="35" x2="110" y2="25" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arr3)"/>
+      </svg>
+      <p class="diagram-caption">Order status transitions &mdash; only forward moves allowed; cancellation only from "Placed"</p>
+    </div>
+    <div class="concept-box">
+      <strong>Implementation detail:</strong> The <code>AllowedTransitions</code> dictionary in <code>OrderController</code> defines valid transitions as a lookup table. Any attempt to skip a state or go backwards returns <code>400 Bad Request</code>. Stock quantities are restored when an order is cancelled.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ AUTH ═══ -->
+<section id="auth">
+  <div class="section-inner">
+    <span class="section-label">Security</span>
+    <h2>Authentication &amp; Authorization</h2>
+    <p class="section-desc">Stateless JWT-based authentication with a three-tier role hierarchy. Every API request carries a self-contained token with the user's identity, role, and company membership.</p>
+
+    <h3>JWT Token Structure</h3>
+    <pre><code>{
+  "sub": "42",                      // User ID (NameIdentifier)
+  "email": "priya@mcd.com",
+  "name": "Priya Sharma",
+  "role": "User",                   // User | CompanyAdmin | SuperAdmin
+  "CompanyId": "3",                 // Tenant identifier (null for SuperAdmin)
+  "iss": "CanteenApi",
+  "aud": "CanteenApp",
+  "exp": 1731686400                 // 8-hour expiry
+}</code></pre>
+
+    <h3>Role Hierarchy</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background:var(--purple-bg);color:var(--purple)">&#x1F451;</div>
+        <h4>SuperAdmin</h4>
+        <p><code>CompanyId = null</code>. Can see all companies' data, manage companies, access any analytics. Cannot place orders (no company context).</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--accent-bg);color:var(--accent)">&#x1F527;</div>
+        <h4>CompanyAdmin</h4>
+        <p>Manages their company's menu items, daily stock, and orders. Sees the kitchen dashboard. Runs analytics queries. All scoped to their <code>CompanyId</code>.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--info-bg);color:var(--info)">&#x1F464;</div>
+        <h4>User (Employee)</h4>
+        <p>Browse today's menu, place orders, view own order history, use AI chat. Can only see their company's menu and their own orders.</p>
+      </div>
+    </div>
+
+    <h3>Auth Flow</h3>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-step-num">1</div>
+        <div class="flow-step-content"><strong>Login Request</strong><p>Client sends <code>POST /api/auth/login</code> with email + password. Server looks up user, verifies bcrypt hash.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">2</div>
+        <div class="flow-step-content"><strong>Token Generation</strong><p>Server creates JWT with claims (userId, email, name, role, companyId) signed with HMAC-SHA256. 8-hour expiry.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">3</div>
+        <div class="flow-step-content"><strong>Client Storage</strong><p>Client stores JWT and sends it as <code>Authorization: Bearer &lt;token&gt;</code> on every subsequent request.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">4</div>
+        <div class="flow-step-content"><strong>Middleware Validation</strong><p>ASP.NET JWT Bearer middleware validates signature, issuer, audience, expiry. Extracts claims into <code>HttpContext.User</code>.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">5</div>
+        <div class="flow-step-content"><strong>Authorization Check</strong><p><code>[Authorize(Roles = "CompanyAdmin,SuperAdmin")]</code> attributes enforce role checks. Extension methods extract tenant context.</p></div>
+      </div>
+    </div>
+
+    <div class="concept-box info">
+      <strong>Interview tip:</strong> JWT trade-offs are a common follow-up. <strong>Pros:</strong> Stateless, self-contained, works across microservices. <strong>Cons:</strong> Can't revoke before expiry, token size grows with claims. Solutions: short expiry + refresh tokens, or a token blacklist in Redis.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MULTI-TENANCY ═══ -->
+<section id="multi-tenant">
+  <div class="section-inner">
+    <span class="section-label">Data Isolation</span>
+    <h2>Multi-Tenant Architecture</h2>
+    <p class="section-desc">The system supports multiple companies sharing a single database, with row-level security enforced through <code>CompanyId</code> filtering on every query.</p>
+
+    <h3>Multi-Tenancy Models Compared</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Model</th><th>Isolation</th><th>Cost</th><th>Complexity</th><th>Our Choice</th></tr></thead>
+        <tbody>
+          <tr><td>Separate databases per tenant</td><td><span class="tag tag-green">Highest</span></td><td>High</td><td>Connection routing, migrations per DB</td><td></td></tr>
+          <tr><td>Shared DB, separate schemas</td><td><span class="tag tag-blue">Medium</span></td><td>Medium</td><td>Schema management</td><td></td></tr>
+          <tr style="background:var(--accent-bg)"><td><strong>Shared DB, shared schema</strong></td><td><span class="tag tag-orange">App-level</span></td><td>Lowest</td><td>Every query must filter by CompanyId</td><td><strong>&#10003; This app</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>How Tenant Isolation Works</h3>
+    <pre><code>// Every data query follows this pattern:
+var companyId = User.GetCompanyId();  // From JWT claims
+if (companyId is null &amp;&amp; !User.IsSuperAdmin())
+    return Forbid();
+
+var query = db.MenuItems.Where(m => m.IsActive);
+
+if (!User.IsSuperAdmin())
+    query = query.Where(m => m.CompanyId == companyId);  // Tenant filter
+
+// SuperAdmin sees everything; others see only their company's data</code></pre>
+
+    <div class="concept-box success">
+      <strong>Key invariant:</strong> No controller ever returns data without checking <code>CompanyId</code>. The extension method <code>User.GetCompanyId()</code> extracts this from JWT claims, making it impossible to forget &mdash; it's always available from the authenticated context.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ AI ═══ -->
+<section id="ai">
+  <div class="section-inner">
+    <span class="section-label">Intelligence Layer</span>
+    <h2>AI Integration</h2>
+    <p class="section-desc">Two AI-powered features demonstrate different patterns: an agentic chat assistant with tool use, and a Text-to-SQL analytics engine. Both use Claude Haiku via the official Anthropic C# SDK.</p>
+
+    <h3>AI Chat &mdash; Agentic Loop with Tool Use</h3>
+    <p>The chat assistant can look up the menu and place orders on behalf of the user through an agentic tool-calling loop.</p>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 780 320" xmlns="http://www.w3.org/2000/svg" fill="none">
+        <defs><marker id="arr4" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--fg-subtle)"/></marker></defs>
+        <rect x="10" y="120" width="100" height="60" rx="10" fill="var(--info-bg)" stroke="var(--info)" stroke-width="1.5"/>
+        <text x="60" y="155" text-anchor="middle" font-family="var(--font-display)" font-size="12" font-weight="600" fill="var(--info)">User</text>
+
+        <rect x="150" y="105" width="130" height="90" rx="10" fill="var(--accent-bg)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="215" y="138" text-anchor="middle" font-family="var(--font-display)" font-size="12" font-weight="600" fill="var(--accent)">ChatService</text>
+        <text x="215" y="158" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-muted)">Agentic Loop</text>
+        <text x="215" y="175" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-muted)">max 10 rounds</text>
+
+        <rect x="330" y="20" width="150" height="60" rx="10" fill="var(--purple-bg)" stroke="var(--purple)" stroke-width="1.5"/>
+        <text x="405" y="45" text-anchor="middle" font-family="var(--font-display)" font-size="12" font-weight="600" fill="var(--purple)">Claude Haiku</text>
+        <text x="405" y="63" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-muted)">Anthropic API</text>
+
+        <rect x="540" y="20" width="220" height="170" rx="10" fill="var(--bg-surface)" stroke="var(--border)" stroke-width="1.5"/>
+        <text x="650" y="45" text-anchor="middle" font-family="var(--font-display)" font-size="12" font-weight="600" fill="var(--fg)">Available Tools</text>
+        <line x1="555" y1="55" x2="745" y2="55" stroke="var(--border)" stroke-width="0.5"/>
+        <rect x="555" y="65" width="190" height="28" rx="6" fill="var(--success-bg)" stroke="var(--success)" stroke-width="1"/>
+        <text x="650" y="84" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--success)">get_today_menu</text>
+        <rect x="555" y="100" width="190" height="28" rx="6" fill="var(--warn-bg)" stroke="var(--warn)" stroke-width="1"/>
+        <text x="650" y="119" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--warn)">place_order</text>
+        <rect x="555" y="135" width="190" height="28" rx="6" fill="var(--info-bg)" stroke="var(--info)" stroke-width="1"/>
+        <text x="650" y="154" text-anchor="middle" font-family="var(--font-mono)" font-size="11" fill="var(--info)">get_order_status</text>
+        <rect x="555" y="168" width="190" height="18" rx="4" fill="var(--bg-code)"/>
+        <text x="650" y="181" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--fg-subtle)">+ more tools...</text>
+
+        <rect x="150" y="240" width="300" height="55" rx="10" fill="var(--teal-bg)" stroke="var(--teal)" stroke-width="1.5"/>
+        <text x="300" y="263" text-anchor="middle" font-family="var(--font-display)" font-size="12" font-weight="600" fill="var(--teal)">SSE Stream (text/event-stream)</text>
+        <text x="300" y="282" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--fg-muted)">TextDelta | ToolStart | ToolDone | [DONE]</text>
+
+        <line x1="110" y1="150" x2="150" y2="150" stroke="var(--fg-subtle)" stroke-width="1.5" marker-end="url(#arr4)"/>
+        <line x1="280" y1="125" x2="330" y2="60" stroke="var(--fg-subtle)" stroke-width="1.5" marker-end="url(#arr4)"/>
+        <line x1="330" y1="40" x2="280" y2="140" stroke="var(--purple)" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arr4)"/>
+        <line x1="480" y1="50" x2="540" y2="80" stroke="var(--fg-subtle)" stroke-width="1.5" marker-end="url(#arr4)"/>
+        <line x1="540" y1="100" x2="480" y2="70" stroke="var(--success)" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arr4)"/>
+        <line x1="215" y1="195" x2="215" y2="240" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#arr4)"/>
+        <line x1="60" y1="180" x2="60" y2="268" stroke="var(--teal)" stroke-width="1.5"/>
+        <line x1="60" y1="268" x2="150" y2="268" stroke="var(--teal)" stroke-width="1.5" marker-end="url(#arr4)"/>
+      </svg>
+      <p class="diagram-caption">Agentic loop: Claude decides which tools to call, the server executes them, results stream back via SSE</p>
+    </div>
+
+    <div class="concept-box purple">
+      <strong>Agentic loop pattern:</strong> The <code>ClaudeApiService</code> runs up to 10 rounds. Each round: send conversation to Claude &rarr; if Claude returns <code>tool_use</code>, execute the tool locally &rarr; append result &rarr; send again. Loop terminates when Claude responds with text only (no more tool calls) or hits the round limit.
+    </div>
+
+    <h3>Analytics &mdash; Text-to-SQL</h3>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-step-num">1</div>
+        <div class="flow-step-content"><strong>Admin asks a natural language question</strong><p>"What were the top 5 most ordered items last week?" sent to <code>POST /api/analytics/query</code>.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">2</div>
+        <div class="flow-step-content"><strong>System prompt provides the schema</strong><p>Claude receives the full table definitions so it understands the data model. The prompt instructs it to output valid SQLite SQL.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">3</div>
+        <div class="flow-step-content"><strong>Claude generates SQL</strong><p>The model produces a <code>SELECT</code> query filtered by the admin's <code>CompanyId</code> for tenant isolation.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">4</div>
+        <div class="flow-step-content"><strong>Server executes and returns results</strong><p>SQL is run against the database. Results are formatted as a table with a natural language summary.</p></div>
+      </div>
+    </div>
+
+    <div class="concept-box">
+      <strong>Security note:</strong> Text-to-SQL is powerful but risky. In production, add: SQL query validation (only SELECT), parameterized CompanyId injection, query timeout limits, result row limits, and possibly a query review step.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DATA FLOW ═══ -->
+<section id="data-flow">
+  <div class="section-inner">
+    <span class="section-label">Request Lifecycle</span>
+    <h2>Data Flow: Placing an Order</h2>
+    <p class="section-desc">Walk through the most critical operation &mdash; placing a food order &mdash; from button click to database commit.</p>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="flow-step-num">1</div>
+        <div class="flow-step-content"><strong>Client: Build the cart</strong><p>User adds items from today's menu. Frontend tracks <code>[{menuItemId, quantity}]</code> locally. Only items from <code>GET /api/stock/today</code> are shown.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">2</div>
+        <div class="flow-step-content"><strong>Client: Submit order</strong><p><code>POST /api/order</code> with <code>{"items": [{"menuItemId": 4, "quantity": 2}]}</code> plus <code>Authorization: Bearer</code> header.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">3</div>
+        <div class="flow-step-content"><strong>Server: Extract tenant context</strong><p>JWT middleware validates token. <code>User.GetUserId()</code> and <code>User.GetCompanyId()</code> extract authenticated identity. SuperAdmins rejected.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">4</div>
+        <div class="flow-step-content"><strong>Server: Validate each line item</strong><p>For each item: load today's <code>DailyStock</code> &rarr; verify item belongs to user's company &rarr; check <code>QuantityAvailable - QuantityOrdered &ge; requested</code>. Return 400 if any check fails.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">5</div>
+        <div class="flow-step-content"><strong>Server: Create order atomically</strong><p>Single <code>SaveChangesAsync</code>: create Order, create OrderItems with snapshotted prices, increment QuantityOrdered on each stock record, compute TotalAmount.</p></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">6</div>
+        <div class="flow-step-content"><strong>Server: Return 201 Created</strong><p>Response includes the full order with items, status "Placed", and total. Kitchen dashboard picks up the new order on its next poll.</p></div>
+      </div>
+    </div>
+
+    <div class="concept-box info">
+      <strong>Concurrency handling:</strong> EF Core's change tracker groups all modifications into a single database transaction. If two users try to order the last serving simultaneously, one succeeds and the other gets a concurrency exception. In production, add optimistic concurrency tokens (<code>RowVersion</code>) on <code>DailyStock</code>.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SCALABILITY ═══ -->
+<section id="scalability">
+  <div class="section-inner">
+    <span class="section-label">Growing The System</span>
+    <h2>Scalability Considerations</h2>
+    <p class="section-desc">The current architecture is optimized for simplicity. Here's how each component evolves as the system grows from single-office to hundreds of companies.</p>
+
+    <h3>Current State vs. Production Scale</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Component</th><th>Current</th><th>At Scale</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Database</strong></td><td>SQLite (single file)</td><td>PostgreSQL with read replicas, partitioned by date</td></tr>
+          <tr><td><strong>API Server</strong></td><td>Single process</td><td>Multiple instances behind load balancer (stateless JWT)</td></tr>
+          <tr><td><strong>Caching</strong></td><td>None</td><td>Redis for today's menu cache, rate limiting</td></tr>
+          <tr><td><strong>Real-Time</strong></td><td>SSE for AI chat</td><td>WebSockets/SignalR for live kitchen updates</td></tr>
+          <tr><td><strong>AI Calls</strong></td><td>Synchronous</td><td>Queue-based with prompt caching, per-tenant rate limits</td></tr>
+          <tr><td><strong>Auth</strong></td><td>8-hour JWT, no refresh</td><td>15-min access + refresh tokens, Redis blacklist</td></tr>
+          <tr><td><strong>Monitoring</strong></td><td>Console logging</td><td>Serilog &rarr; ELK, APM, health checks, alerting</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Scaling Strategy: Step by Step</h3>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background:var(--success-bg);color:var(--success)">1</div>
+        <h4>Migrate to PostgreSQL</h4>
+        <p>Drop-in via EF Core &mdash; change connection string and provider. Gains: concurrent writes, connection pooling, JSONB, full-text search.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--info-bg);color:var(--info)">2</div>
+        <h4>Add Caching Layer</h4>
+        <p>Redis for frequently read data: today's menu (invalidate on stock changes), company settings. Cuts DB load by 60-70%.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--warn-bg);color:var(--warn)">3</div>
+        <h4>Horizontal API Scaling</h4>
+        <p>3+ API instances behind a load balancer. JWT is stateless, so no session affinity needed. Auto-scale on CPU/request count.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--purple-bg);color:var(--purple)">4</div>
+        <h4>Async Processing</h4>
+        <p>Move AI analytics to a background queue (RabbitMQ/Azure Service Bus). Admin gets "processing" status and is notified when results are ready.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--teal-bg);color:var(--teal)">5</div>
+        <h4>Database Partitioning</h4>
+        <p>Partition DailyStock by month and Order by quarter. Old data moves to cold storage. Current queries hit only today's partition.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:var(--accent-bg);color:var(--accent)">6</div>
+        <h4>CDN &amp; Edge Caching</h4>
+        <p>Static frontends from CDN. Menu images through CloudFront. API responses with short cache headers for public data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TRADE-OFFS ═══ -->
+<section id="tradeoffs">
+  <div class="section-inner">
+    <span class="section-label">Interview Discussion</span>
+    <h2>Design Trade-offs</h2>
+    <p class="section-desc">Every architectural decision is a trade-off. Discussing these in an interview shows deeper understanding than presenting a "perfect" design.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>SQLite vs. PostgreSQL</h4>
+        <p><strong>Chose SQLite:</strong> Zero setup, no dependencies. <strong>Trade-off:</strong> No concurrent writes, no replication. Acceptable because the EF Core migration path to PostgreSQL is a config change.</p>
+      </div>
+      <div class="card">
+        <h4>Shared Schema Multi-Tenancy</h4>
+        <p><strong>Chose shared schema:</strong> Simplest to implement, cheapest to operate. <strong>Trade-off:</strong> One buggy query without CompanyId leaks data across tenants. Must be enforced at every query.</p>
+      </div>
+      <div class="card">
+        <h4>JWT Without Refresh Tokens</h4>
+        <p><strong>Chose simple JWT:</strong> Stateless, no extra storage. <strong>Trade-off:</strong> 8-hour window for compromised tokens, no immediate revocation. Production should add short-lived tokens + refresh rotation.</p>
+      </div>
+      <div class="card">
+        <h4>Polling vs. Push for Kitchen</h4>
+        <p><strong>Chose polling:</strong> Simple HTTP. <strong>Trade-off:</strong> Delay between order placement and kitchen visibility. WebSockets/SignalR would give instant updates.</p>
+      </div>
+      <div class="card">
+        <h4>SSE vs. WebSockets for Chat</h4>
+        <p><strong>Chose SSE:</strong> Simpler protocol, auto-reconnects, perfect for server-to-client streaming. <strong>Trade-off:</strong> Unidirectional &mdash; each turn needs a new HTTP POST.</p>
+      </div>
+      <div class="card">
+        <h4>Monolith vs. Microservices</h4>
+        <p><strong>Chose monolith:</strong> One deployment, shared transactions, simple debugging. <strong>Trade-off:</strong> Can't scale AI and ordering independently. At scale, split into Order/Menu/AI/Auth services.</p>
+      </div>
+    </div>
+
+    <h3>Common Interview Follow-Up Questions</h3>
+    <div class="concept-box">
+      <p><strong>"How would you handle the lunch rush?"</strong> &mdash; Peak ordering in a 30-minute window. Solutions: pre-compute today's menu at stock-set time, cache aggressively, rate-limit per user, queue to smooth order processing, pre-authorize stock.</p>
+    </div>
+    <div class="concept-box info">
+      <p><strong>"How do you prevent overselling?"</strong> &mdash; Currently: EF Core transaction ensures atomic read-check-update. At scale: <code>SELECT FOR UPDATE</code> or optimistic concurrency tokens. Extreme scale: Redis pre-decrement counts, reconcile async.</p>
+    </div>
+    <div class="concept-box purple">
+      <p><strong>"What if Claude is down?"</strong> &mdash; Circuit breaker pattern (fallback to "AI temporarily unavailable"), queue and retry, cache common responses, provide degraded experience with direct SQL for analytics.</p>
+    </div>
+    <div class="concept-box success">
+      <p><strong>"How would you add notifications?"</strong> &mdash; FCM for push. When order status changes to "Ready", push to user. Email: queue (don't block the API), process with background worker, use SendGrid.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div style="max-width:1200px;margin:0 auto">
+    <p>Company Canteen &mdash; System Design Documentation</p>
+    <p style="margin-top:6px">.NET 10 &bull; React 19 &bull; Angular 19 &bull; Claude AI &bull; SQLite &bull; JWT Auth</p>
+  </div>
+</footer>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.top-nav a:not(.nav-logo)');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+        });
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
