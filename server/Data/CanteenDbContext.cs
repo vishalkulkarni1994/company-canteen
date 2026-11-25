@@ -11,9 +11,18 @@ public class CanteenDbContext(DbContextOptions<CanteenDbContext> options) : DbCo
     public DbSet<DailyStock> DailyStocks => Set<DailyStock>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<DocumentChunk>()
+            .HasIndex(d => new { d.CompanyId, d.ContentHash }).IsUnique();
+        modelBuilder.Entity<DocumentChunk>()
+            .HasOne(d => d.Company)
+            .WithMany()
+            .HasForeignKey(d => d.CompanyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<Company>().HasIndex(c => c.Name).IsUnique();
 
         modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();

@@ -1,0 +1,52 @@
+[
+  {
+    "companyId": 1,
+    "title": "Masala Chai",
+    "content": "Masala Chai: A traditional Indian spiced tea made with black tea leaves, whole milk, sugar, and a blend of aromatic spices including cardamom, cinnamon, ginger, cloves, and black pepper. Brewed by simmering tea and spices in milk-water mixture. Contains: dairy (milk). Allergens: none beyond dairy. Vegan alternative available with oat milk on request. Caffeine content: moderate (~50mg per cup). Served hot. Preparation time: 5 minutes."
+  },
+  {
+    "companyId": 1,
+    "title": "Samosa",
+    "content": "Samosa: Crispy deep-fried pastry filled with spiced potato, green peas, cumin, coriander, and green chillies. The outer shell is made from all-purpose flour (maida), oil, and salt. Deep-fried in vegetable oil. Contains: gluten (wheat flour). Allergens: gluten. Vegetarian. Served with mint chutney and tamarind chutney. Calories: approximately 150 per piece. Preparation time: made fresh in batches, 15 minutes."
+  },
+  {
+    "companyId": 1,
+    "title": "Veg Thali",
+    "content": "Veg Thali: A complete vegetarian meal consisting of steamed basmati rice, yellow dal (toor dal with turmeric and cumin tempering), seasonal vegetable sabzi (rotates daily - could be aloo gobi, bhindi masala, or mixed veg), 2 fresh whole wheat rotis, cucumber-tomato-onion salad with lemon dressing, and a small serving of pickle. Contains: gluten (wheat in roti), dairy (ghee used in dal tempering). Allergens: gluten, dairy. Calories: approximately 550-650 per thali. All ingredients sourced fresh daily."
+  },
+  {
+    "companyId": 1,
+    "title": "Chicken Biryani",
+    "content": "Chicken Biryani: Fragrant basmati rice layered with marinated chicken pieces, cooked in dum style (slow-cooked in sealed pot). Marinade includes yogurt, ginger-garlic paste, red chilli powder, turmeric, garam masala, and fresh mint. Rice is parboiled with whole spices (bay leaf, cardamom, cinnamon, star anise). Garnished with fried onions and fresh coriander. Contains: dairy (yogurt in marinade), tree nuts (none). Allergens: dairy. Non-vegetarian (chicken). Calories: approximately 450 per serving. Does NOT contain nuts. Preparation time: 45 minutes (dum cooking)."
+  },
+  {
+    "companyId": 1,
+    "title": "Cold Coffee",
+    "content": "Cold Coffee: Chilled coffee beverage blended with milk, sugar, instant coffee, and a scoop of vanilla ice cream. Topped with chocolate shavings. Contains: dairy (milk, ice cream), caffeine (~80mg). Allergens: dairy. Can be made sugar-free on request. Calories: approximately 250 per glass. Preparation time: 3 minutes."
+  },
+  {
+    "companyId": 2,
+    "title": "Green Tea",
+    "content": "Green Tea: Organic Japanese sencha green tea brewed at 80 degrees Celsius for 2 minutes. Served plain or with a slice of lemon and honey on the side. No milk added. Contains: caffeine (~30mg per cup). Allergens: none. Vegan. Zero calories (without honey). Honey adds approximately 20 calories. Preparation time: 3 minutes."
+  },
+  {
+    "companyId": 2,
+    "title": "Paneer Wrap",
+    "content": "Paneer Wrap: Grilled cottage cheese (paneer) marinated in tandoori spices, wrapped in a whole wheat tortilla with shredded lettuce, sliced onions, bell peppers, mint mayo sauce, and a squeeze of lemon. Contains: dairy (paneer, mayo), gluten (tortilla). Allergens: dairy, gluten. Vegetarian. Calories: approximately 380 per wrap. Can be made with gluten-free tortilla on request (additional charge). Preparation time: 8 minutes."
+  },
+  {
+    "companyId": 2,
+    "title": "Pasta Alfredo",
+    "content": "Pasta Alfredo: Penne pasta in a creamy white sauce made with butter, heavy cream, garlic, parmesan cheese, and black pepper. Garnished with fresh parsley. Contains: gluten (pasta), dairy (butter, cream, parmesan). Allergens: gluten, dairy. Vegetarian. Calories: approximately 520 per serving. Add grilled chicken for extra charge. Preparation time: 12 minutes."
+  },
+  {
+    "companyId": 2,
+    "title": "Caesar Salad",
+    "content": "Caesar Salad: Fresh romaine lettuce with house-made Caesar dressing (made with olive oil, lemon juice, dijon mustard, garlic, parmesan, and anchovy paste), croutons, shaved parmesan cheese, and cherry tomatoes. Contains: gluten (croutons), dairy (parmesan), fish (anchovy in dressing). Allergens: gluten, dairy, fish. Calories: approximately 320 per serving. Can be made without croutons for gluten-free option. Preparation time: 5 minutes."
+  },
+  {
+    "companyId": 2,
+    "title": "Smoothie Bowl",
+    "content": "Smoothie Bowl: Thick acai berry smoothie base blended with frozen banana, blueberries, and almond milk. Topped with granola, sliced fresh strawberries, chia seeds, shredded coconut, and a drizzle of honey. Contains: tree nuts (almond milk, coconut), gluten (granola). Allergens: tree nuts, gluten. Vegan (without honey). Calories: approximately 400 per bowl. Preparation time: 5 minutes."
+  }
+]

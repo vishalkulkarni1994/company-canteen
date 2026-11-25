@@ -7,7 +7,7 @@ using CanteenApi.Models;
 
 namespace CanteenApi.Services;
 
-public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeFactory, ILogger<ChatService> logger)
+public class ChatService(ClaudeApiService claudeApi, RagService ragService, IServiceScopeFactory scopeFactory, ILogger<ChatService> logger)
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -24,6 +24,8 @@ public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeF
             Always call get_today_menu first when the user wants to order or see what's available.
             When showing the menu, format it nicely with item names, prices (₹), and remaining stock.
             Before placing an order, confirm the items and total with the user.
+            When users ask about ingredients, allergens, nutrition, recipes, canteen policies,
+            operating hours, or any knowledge-based question, use the search_knowledge tool.
             Keep responses concise and helpful.
             """,
         Tools = BuildToolDefinitions()
@@ -72,6 +74,8 @@ public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeF
         {
             "get_today_menu" => await GetTodayMenu(db, companyId),
             "place_order" => await PlaceOrder(db, input, userId, companyId),
+            "search_knowledge" => await ragService.SearchAsync(
+                input.GetProperty("query").GetString()!, companyId),
             var unknown => throw new NotSupportedException($"Unknown tool '{unknown}'.")
         };
     }
@@ -189,6 +193,24 @@ public class ChatService(ClaudeApiService claudeApi, IServiceScopeFactory scopeF
                         }
                     """),
                     ["required"] = JsonSerializer.Deserialize<JsonElement>("""["items"]""")
+                })
+            },
+            new Tool
+            {
+                Name = "search_knowledge",
+                Description = "Search the canteen knowledge base for information about recipes, ingredients, allergens, nutrition, canteen policies, FAQ, operating hours, and procedures. Call this when the user asks about food content, dietary info, or canteen rules.",
+                InputSchema = InputSchema.FromRawUnchecked(new Dictionary<string, JsonElement>
+                {
+                    ["type"] = JsonSerializer.Deserialize<JsonElement>("\"object\""),
+                    ["properties"] = JsonSerializer.Deserialize<JsonElement>("""
+                        {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query describing what information is needed"
+                            }
+                        }
+                    """),
+                    ["required"] = JsonSerializer.Deserialize<JsonElement>("""["query"]""")
                 })
             }
         ];

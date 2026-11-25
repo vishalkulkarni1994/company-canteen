@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG — Full Call Chain with Code</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #818cf8;
+            --accent3: #34d399;
+            --accent4: #f472b6;
+            --code-bg: #0d1117;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: 280px; height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            overflow-y: auto; padding: 24px 16px;
+            z-index: 100;
+        }
+        .sidebar h2 {
+            font-size: 14px; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--accent);
+            margin-bottom: 16px;
+        }
+        .sidebar a {
+            display: block; padding: 6px 10px; margin: 2px 0;
+            color: var(--muted); text-decoration: none;
+            font-size: 13px; border-radius: 6px;
+            transition: all .2s;
+        }
+        .sidebar a:hover { background: rgba(56,189,248,.1); color: var(--accent); }
+        .sidebar .divider { border-top: 1px solid var(--border); margin: 12px 0; }
+
+        /* Main */
+        .main { margin-left: 280px; padding: 48px 56px; max-width: 1050px; width: 100%; }
+
+        h1 {
+            font-size: 32px; font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 40px; }
+
+        .section { margin-bottom: 56px; }
+        .section h2 {
+            font-size: 22px; font-weight: 600; color: var(--accent);
+            border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 20px;
+        }
+        .section h3 { font-size: 17px; color: var(--accent2); margin: 20px 0 10px; }
+        .section h4 { font-size: 15px; color: var(--accent3); margin: 16px 0 8px; }
+
+        p, li { color: var(--text); margin-bottom: 10px; }
+        ul, ol { padding-left: 24px; }
+
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; padding: 24px; margin: 16px 0;
+        }
+        .card-title {
+            font-size: 15px; font-weight: 600; color: var(--accent2);
+            margin-bottom: 12px; text-transform: uppercase; letter-spacing: .5px;
+        }
+
+        pre { margin: 14px 0; border-radius: 8px; overflow-x: auto; }
+        pre code { font-size: 13px; line-height: 1.6; }
+        code:not(pre code) {
+            background: var(--code-bg); padding: 2px 6px;
+            border-radius: 4px; font-size: 13px; color: var(--accent3);
+        }
+
+        .kv-table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+        .kv-table th, .kv-table td {
+            text-align: left; padding: 10px 14px;
+            border-bottom: 1px solid var(--border); font-size: 14px;
+        }
+        .kv-table th { color: var(--accent); font-weight: 600; white-space: nowrap; }
+        .kv-table td { color: var(--text); }
+
+        .tag {
+            display: inline-block; padding: 3px 10px; border-radius: 12px;
+            font-size: 12px; font-weight: 600; margin: 2px 4px;
+        }
+        .tag-blue  { background: rgba(56,189,248,.15); color: var(--accent); }
+        .tag-green { background: rgba(52,211,153,.15); color: var(--accent3); }
+        .tag-pink  { background: rgba(244,114,182,.15); color: var(--accent4); }
+        .tag-purple { background: rgba(129,140,248,.15); color: var(--accent2); }
+
+        .callout {
+            background: rgba(56,189,248,.08); border-left: 4px solid var(--accent);
+            padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0;
+        }
+        .callout-warn {
+            background: rgba(251,191,36,.08); border-left: 4px solid #fbbf24;
+        }
+
+        .step-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 12px;
+        }
+        .step-num {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #0f172a; font-weight: 800; font-size: 18px;
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .step-meta { font-size: 13px; color: var(--muted); }
+        .step-meta strong { color: var(--accent3); }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 24px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <h2>RAG Call Chain</h2>
+    <a href="#overview">Overview &amp; Flow Diagram</a>
+    <div class="divider"></div>
+    <a href="#step0">Step 0 &mdash; App Startup (Ingestion)</a>
+    <a href="#step1">Step 1 &mdash; User Sends Message</a>
+    <a href="#step2">Step 2 &mdash; Claude Picks search_knowledge</a>
+    <a href="#step3">Step 3 &mdash; DispatchTool &rarr; RagService</a>
+    <a href="#step4">Step 4 &mdash; Query Embedding</a>
+    <a href="#step5">Step 5 &mdash; Vector Search + Cosine Similarity</a>
+    <a href="#step6">Step 6 &mdash; Claude Generates Grounded Answer</a>
+    <a href="#step7">Step 7 &mdash; Response Streamed to Client</a>
+    <div class="divider"></div>
+    <a href="#ingestion-detail">Ingestion Deep-Dive</a>
+    <a href="#files">File Map</a>
+    <a href="#interview">Interview One-Liner</a>
+</nav>
+
+<div class="main">
+
+<h1>RAG &mdash; Full Call Chain with Code</h1>
+<p class="subtitle">
+    Every method, in call order, from &ldquo;app starts up and embeds documents&rdquo; to &ldquo;user gets a grounded answer.&rdquo;
+    Read top to bottom. 7 files, 8 methods, 2 flows (ingestion + retrieval).
+</p>
+
+<!-- ═══ OVERVIEW ═══ -->
+<div class="section" id="overview">
+    <h2>End-to-End Flow Diagram</h2>
+    <p>Two flows in one system: <strong>ingestion</strong> (startup, once) and <strong>retrieval</strong> (every knowledge question).</p>
+
+    <div class="card" style="padding: 32px;">
+        <div class="card-title">Flow A &mdash; Ingestion (App Startup)</div>
+        <div style="font-family: monospace; font-size: 13px; line-height: 2.2;">
+            <div><span class="tag tag-blue">0</span> <strong>App starts</strong> &rarr; <code>RagIngestionService.StartAsync()</code> fires as IHostedService</div>
+            <div style="padding-left: 48px;">&darr; <code>LoadSeedDocuments()</code> &mdash; reads <code>recipes.json</code> + <code>policies.json</code> from disk</div>
+            <div style="padding-left: 48px;">&darr; <code>FilterAlreadyIngested()</code> &mdash; SHA-256 content hash vs <code>DocumentChunks</code> table</div>
+            <div style="padding-left: 48px;">&darr; <code>EmbedInBatches()</code> &mdash; calls Azure OpenAI <code>text-embedding-3-large</code> in batches of 16</div>
+            <div style="padding-left: 48px;">&darr; <code>EmbeddingService.SerializeEmbedding()</code> &mdash; <code>float[]</code> &rarr; <code>byte[]</code> for SQLite BLOB</div>
+            <div style="padding-left: 48px;">&darr; <code>db.SaveChangesAsync()</code> &mdash; upsert into <code>DocumentChunks</code> table</div>
+            <div style="padding-left: 48px;">&darr; logs: <strong>&ldquo;Successfully ingested {N} document chunks&rdquo;</strong></div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 32px;">
+        <div class="card-title">Flow B &mdash; Retrieval (Every Knowledge Question)</div>
+        <div style="font-family: monospace; font-size: 13px; line-height: 2.2;">
+            <div><span class="tag tag-pink">1</span> <strong>User asks</strong> &ldquo;Does chicken biryani contain nuts?&rdquo; &rarr; <code>POST /api/chat/stream</code></div>
+            <div style="padding-left: 48px;">&darr; <code>ChatController</code> extracts userId, companyId from JWT</div>
+            <div style="padding-left: 48px;">&darr; <code>ChatService.SendMessageStream()</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+            <div><span class="tag tag-green">2</span> <strong>Claude sees 3 tools:</strong> <code>get_today_menu</code>, <code>place_order</code>, <code>search_knowledge</code></div>
+            <div style="padding-left: 48px;">&darr; Claude decides this is a knowledge question</div>
+            <div style="padding-left: 48px;">&darr; returns <code>tool_use</code>: <code>search_knowledge({ "query": "chicken biryani nuts allergens ingredients" })</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+            <div><span class="tag tag-green">3</span> <strong>Tool dispatch</strong> &rarr; <code>ChatService.DispatchTool("search_knowledge", input)</code></div>
+            <div style="padding-left: 48px;">&darr; switch matches <code>"search_knowledge"</code></div>
+            <div style="padding-left: 48px;">&darr; calls <code>RagService.SearchAsync(query, companyId)</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+            <div><span class="tag tag-purple">4</span> <strong>Query embedding</strong> &rarr; <code>EmbeddingService.EmbedAsync(query)</code></div>
+            <div style="padding-left: 48px;">&darr; <code>POST</code> to Azure OpenAI embeddings endpoint</div>
+            <div style="padding-left: 48px;">&darr; returns <code>float[3072]</code> (text-embedding-3-large dimension)</div>
+            <div style="padding-left: 24px;">&darr;</div>
+            <div><span class="tag tag-purple">5</span> <strong>Vector search</strong> &rarr; load all chunks <code>WHERE CompanyId == {companyId}</code></div>
+            <div style="padding-left: 48px;">&darr; <code>DeserializeEmbedding()</code> &mdash; <code>byte[]</code> &rarr; <code>float[]</code> for each chunk</div>
+            <div style="padding-left: 48px;">&darr; <code>CosineSimilarity(queryVec, chunkVec)</code> for each chunk</div>
+            <div style="padding-left: 48px;">&darr; <code>OrderByDescending(score).Take(3)</code> &mdash; top-3 most relevant</div>
+            <div style="padding-left: 48px;">&darr; format as <code>[recipe: Chicken Biryani] (relevance: 0.87)\n{content}</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+            <div><span class="tag tag-pink">6</span> <strong>Tool result &rarr; Claude</strong> (3 chunks as context string)</div>
+            <div style="padding-left: 48px;">&darr; Claude reads the retrieved recipe: &ldquo;Does NOT contain nuts&rdquo;</div>
+            <div style="padding-left: 48px;">&darr; Claude generates grounded answer: &ldquo;No, the chicken biryani does not contain nuts...&rdquo;</div>
+            <div style="padding-left: 24px;">&darr;</div>
+            <div><span class="tag tag-blue">7</span> <strong>SSE stream</strong> &rarr; <code>ChatController</code> streams text deltas + tool events to Angular client</div>
+            <div style="padding-left: 48px;">&darr; User sees: answer with accurate allergen info from the actual recipe</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══ STEP 0 ═══ -->
+<div class="section" id="step0">
+    <div class="step-header">
+        <div class="step-num">0</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">App Startup &mdash; Ingestion Pipeline</h2>
+            <div class="step-meta"><strong>RagIngestionService.cs</strong> &mdash; IHostedService runs once on startup, embeds seed documents into SQLite.</div>
+        </div>
+    </div>
+
+    <p>The ingestion pipeline runs <strong>automatically on startup</strong>. It reads JSON seed files, hashes each document's content, skips anything already ingested, embeds the new ones via Azure OpenAI, and stores them as BLOB columns in SQLite.</p>
+
+    <ol>
+        <li><strong>Load seed data</strong> &mdash; <code>LoadSeedDocuments()</code> reads <code>recipes.json</code> and <code>policies.json</code> from <code>Data/SeedData/</code></li>
+        <li><strong>Deduplication</strong> &mdash; <code>FilterAlreadyIngested()</code> computes SHA-256 of each document's content, compares against existing <code>ContentHash</code> values in the database</li>
+        <li><strong>Batch embedding</strong> &mdash; <code>EmbedInBatches()</code> sends texts to Azure OpenAI in batches of 16 (API supports up to 2048)</li>
+        <li><strong>Store</strong> &mdash; each document becomes a <code>DocumentChunk</code> row with the embedding serialized as <code>byte[]</code></li>
+    </ol>
+
+<pre><code class="language-csharp">// RagIngestionService.cs — IHostedService.StartAsync
+public async Task StartAsync(CancellationToken ct)
+{
+    var documents = LoadSeedDocuments();     // reads recipes.json + policies.json
+    var newDocs = await FilterAlreadyIngested(db, documents, ct);  // SHA-256 dedup
+
+    if (newDocs.Count == 0)
+    {
+        logger.LogInformation("All documents already ingested, nothing to do.");
+        return;
+    }
+
+    // Embed in batches of 16 via Azure OpenAI text-embedding-3-large
+    var texts = newDocs.Select(d => d.Content).ToList();
+    var embeddings = await EmbedInBatches(texts, batchSize: 16, ct);
+
+    for (int i = 0; i &lt; newDocs.Count; i++)
+    {
+        db.DocumentChunks.Add(new DocumentChunk
+        {
+            CompanyId   = doc.CompanyId,
+            Source      = /* "recipe" or "policy" based on title */,
+            Title       = doc.Title,
+            Content     = doc.Content,
+            Embedding   = EmbeddingService.SerializeEmbedding(embeddings[i]),
+            ContentHash = ComputeHash(doc.Content)   // SHA-256
+        });
+    }
+
+    await db.SaveChangesAsync(ct);
+}</code></pre>
+
+    <div class="callout">
+        <strong>Why content hash?</strong> On restart, the service skips documents whose content hasn't changed. If you update a recipe's text, the hash changes and it gets re-embedded. This is cheap idempotency &mdash; no duplicate rows, no wasted embedding API calls.
+    </div>
+
+    <h3>Seed Data Structure</h3>
+    <p>Each JSON file is an array of <code>{ companyId, title, content }</code>. One chunk per recipe, one chunk per policy section &mdash; naturally pre-chunked because each document is a self-contained unit.</p>
+
+<pre><code class="language-json">// Data/SeedData/recipes.json
+[
+  {
+    "companyId": 1,
+    "title": "Chicken Biryani",
+    "content": "Chicken Biryani: Fragrant basmati rice layered with marinated chicken...
+                Contains: dairy (yogurt in marinade), tree nuts (none).
+                Allergens: dairy. Does NOT contain nuts."
+  }
+]</code></pre>
+</div>
+
+
+<!-- ═══ STEP 1 ═══ -->
+<div class="section" id="step1">
+    <div class="step-header">
+        <div class="step-num">1</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">User Sends a Knowledge Question</h2>
+            <div class="step-meta"><strong>ChatController.cs</strong> &rarr; <strong>ChatService.cs</strong> &mdash; The user asks something that needs document retrieval.</div>
+        </div>
+    </div>
+
+    <p>The Angular client sends the message to <code>POST /api/chat/stream</code>. The controller extracts <code>userId</code> and <code>companyId</code> from the JWT and calls <code>ChatService.SendMessageStream()</code>.</p>
+
+<pre><code class="language-csharp">// ChatController.cs — POST /api/chat/stream
+[HttpPost("stream")]
+public async Task StreamChat([FromBody] ChatRequest request)
+{
+    Response.ContentType = "text/event-stream";
+    var userId = int.Parse(User.FindFirst("userId")!.Value);
+    var companyId = int.Parse(User.FindFirst("companyId")!.Value);
+
+    await foreach (var evt in chatService.SendMessageStream(
+        request.Message, userId, companyId, request.History, ct))
+    {
+        await Response.WriteAsync($"data: {JsonSerializer.Serialize(evt)}\n\n");
+        await Response.Body.FlushAsync();
+    }
+}</code></pre>
+
+    <p><code>ChatService.SendMessageStream()</code> calls <code>ClaudeApiService.SendStreamAsync()</code> with the agent definition that now includes <strong>three tools</strong>: <code>get_today_menu</code>, <code>place_order</code>, and <code>search_knowledge</code>.</p>
+</div>
+
+
+<!-- ═══ STEP 2 ═══ -->
+<div class="section" id="step2">
+    <div class="step-header">
+        <div class="step-num">2</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Claude Picks <code>search_knowledge</code></h2>
+            <div class="step-meta"><strong>ChatService.cs</strong> &mdash; Claude decides this question needs document retrieval, not a database query.</div>
+        </div>
+    </div>
+
+    <p>Claude sees the system prompt, the user's question, and three tool definitions. For &ldquo;Does chicken biryani contain nuts?&rdquo; it recognizes this is an <strong>ingredient/allergen question</strong> &mdash; not an order or menu query &mdash; and calls <code>search_knowledge</code>.</p>
+
+<pre><code class="language-csharp">// ChatService.cs — tool definition for search_knowledge
+new Tool
+{
+    Name = "search_knowledge",
+    Description = "Search the canteen knowledge base for information about " +
+                  "recipes, ingredients, allergens, nutrition, canteen policies, " +
+                  "FAQ, operating hours, and procedures. Call this when the user " +
+                  "asks about food content, dietary info, or canteen rules.",
+    InputSchema = new {
+        type = "object",
+        properties = new {
+            query = new {
+                type = "string",
+                description = "The search query describing what information is needed"
+            }
+        },
+        required = new[] { "query" }
+    }
+}</code></pre>
+
+    <div class="callout">
+        <strong>Why a tool, not always-on?</strong> &ldquo;Place an order for 2 biryanis&rdquo; doesn't need RAG. By exposing retrieval as a tool, Claude decides when to search. This avoids wasting embedding API calls and context window space on irrelevant retrievals.
+    </div>
+
+    <p>Claude returns:</p>
+<pre><code class="language-json">{
+  "type": "tool_use",
+  "name": "search_knowledge",
+  "input": {
+    "query": "chicken biryani nuts allergens ingredients"
+  }
+}</code></pre>
+</div>
+
+
+<!-- ═══ STEP 3 ═══ -->
+<div class="section" id="step3">
+    <div class="step-header">
+        <div class="step-num">3</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">DispatchTool &rarr; RagService.SearchAsync</h2>
+            <div class="step-meta"><strong>ChatService.cs</strong> &rarr; <strong>RagService.cs</strong> &mdash; The switch statement routes the tool call to the RAG service.</div>
+        </div>
+    </div>
+
+    <p>The agentic loop in <code>ClaudeApiService</code> extracts the tool name and input, then calls the <code>dispatchTool</code> delegate. In <code>ChatService</code>, this is a simple <strong>switch expression</strong>:</p>
+
+<pre><code class="language-csharp">// ChatService.cs — DispatchTool
+private async Task&lt;string&gt; DispatchTool(
+    string toolName, JsonElement input, int userId, int companyId)
+{
+    using var scope = scopeFactory.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService&lt;CanteenDbContext&gt;();
+
+    return toolName switch
+    {
+        "get_today_menu"   => await GetTodayMenu(db, companyId),
+        "place_order"      => await PlaceOrder(db, input, userId, companyId),
+        "search_knowledge" => await ragService.SearchAsync(
+                                  input.GetProperty("query").GetString()!, companyId),
+        var unknown        => throw new NotSupportedException($"Unknown tool '{unknown}'.")
+    };
+}</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Mapping</th><th>What happens</th></tr>
+        <tr><td><code>"get_today_menu"</code></td><td>Queries <code>DailyStocks</code> + <code>MenuItems</code> (structured data)</td></tr>
+        <tr><td><code>"place_order"</code></td><td>Creates an <code>Order</code> with stock decrement (action)</td></tr>
+        <tr><td><code>"search_knowledge"</code></td><td>Vector search in <code>DocumentChunks</code> (RAG retrieval)</td></tr>
+    </table>
+
+    <div class="callout">
+        <strong>No magic.</strong> The mapping is a string match in a switch expression. Claude returns <code>"search_knowledge"</code> as a string, the switch matches it, and calls <code>RagService.SearchAsync()</code>. Same pattern as a controller routing a URL to a method.
+    </div>
+</div>
+
+
+<!-- ═══ STEP 4 ═══ -->
+<div class="section" id="step4">
+    <div class="step-header">
+        <div class="step-num">4</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Query Embedding</h2>
+            <div class="step-meta"><strong>EmbeddingService.cs</strong> &mdash; The user's search query is converted to a vector via Azure OpenAI.</div>
+        </div>
+    </div>
+
+    <p>Before we can search, the query string needs to become a vector in the same embedding space as the stored documents. <code>EmbeddingService.EmbedAsync()</code> sends a single text to the Azure OpenAI embeddings API.</p>
+
+<pre><code class="language-csharp">// EmbeddingService.cs — single text embedding
+public async Task&lt;float[]&gt; EmbedAsync(string text, CancellationToken ct = default)
+{
+    var results = await EmbedBatchAsync([text], ct);
+    return results[0];
+}
+
+// The batch method that does the actual API call
+public async Task&lt;List&lt;float[]&gt;&gt; EmbedBatchAsync(
+    IReadOnlyList&lt;string&gt; texts, CancellationToken ct = default)
+{
+    // POST {endpoint}/openai/deployments/text-embedding-3-large/embeddings
+    //      ?api-version=2024-06-01
+    // Body: { "input": ["chicken biryani nuts allergens ingredients"] }
+
+    var url = $"{_endpoint}/openai/deployments/{_deployment}" +
+              "/embeddings?api-version=2024-06-01";
+
+    using var client = httpFactory.CreateClient();
+    client.DefaultRequestHeaders.Add("api-key", _apiKey);
+
+    var response = await client.PostAsync(url, content, ct);
+    var json = await response.Content.ReadFromJsonAsync&lt;JsonElement&gt;(ct);
+
+    // Returns float[3072] — text-embedding-3-large dimension
+    return json.GetProperty("data").EnumerateArray()
+        .OrderBy(d => d.GetProperty("index").GetInt32())
+        .Select(d => d.GetProperty("embedding").EnumerateArray()
+            .Select(v => v.GetSingle()).ToArray())
+        .ToList();
+}</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Parameter</th><th>Value</th></tr>
+        <tr><td>Model</td><td><code>text-embedding-3-large</code></td></tr>
+        <tr><td>Dimensions</td><td>3072 floats per vector</td></tr>
+        <tr><td>Auth</td><td><code>api-key</code> header (Azure-style, not Bearer)</td></tr>
+        <tr><td>Storage</td><td>3072 &times; 4 bytes = <strong>12 KB per chunk</strong> as BLOB</td></tr>
+    </table>
+
+    <h3>Serialization: float[] &harr; byte[]</h3>
+    <p>SQLite stores embeddings as <code>BLOB</code>. We need to convert between <code>float[]</code> and <code>byte[]</code>:</p>
+
+<pre><code class="language-csharp">// EmbeddingService.cs — zero-copy serialization
+public static byte[] SerializeEmbedding(float[] embedding)
+{
+    var bytes = new byte[embedding.Length * sizeof(float)];
+    Buffer.BlockCopy(embedding, 0, bytes, 0, bytes.Length);
+    return bytes;
+}
+
+public static float[] DeserializeEmbedding(byte[] bytes)
+{
+    var floats = new float[bytes.Length / sizeof(float)];
+    Buffer.BlockCopy(bytes, 0, floats, 0, bytes.Length);
+    return floats;
+}</code></pre>
+</div>
+
+
+<!-- ═══ STEP 5 ═══ -->
+<div class="section" id="step5">
+    <div class="step-header">
+        <div class="step-num">5</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Vector Search + Cosine Similarity</h2>
+            <div class="step-meta"><strong>RagService.cs</strong> &mdash; Load company's chunks, rank by cosine similarity, return top-K.</div>
+        </div>
+    </div>
+
+    <p>This is the heart of RAG retrieval. <code>SearchAsync</code> does four things:</p>
+
+    <ol>
+        <li><strong>Embed the query</strong> &mdash; get the query vector from Azure OpenAI</li>
+        <li><strong>Load company chunks</strong> &mdash; <code>WHERE CompanyId == companyId</code> (tenant isolation)</li>
+        <li><strong>Rank by cosine similarity</strong> &mdash; compare query vector against every chunk's embedding</li>
+        <li><strong>Return top-K</strong> &mdash; format the best matches as a context string for Claude</li>
+    </ol>
+
+<pre><code class="language-csharp">// RagService.cs — the core retrieval method
+public async Task&lt;string&gt; SearchAsync(
+    string query, int companyId, int topK = 3, CancellationToken ct = default)
+{
+    // 1. Embed the query
+    var queryVec = await embedding.EmbedAsync(query, ct);
+
+    // 2. Load all document chunks for THIS company only
+    var chunks = await db.DocumentChunks
+        .Where(c => c.CompanyId == companyId)   // TENANT ISOLATION
+        .Select(c => new { c.Title, c.Content, c.Source, c.Embedding })
+        .ToListAsync(ct);
+
+    // 3. Rank by cosine similarity
+    var results = chunks
+        .Select(c => new
+        {
+            c.Title, c.Content, c.Source,
+            Score = CosineSimilarity(queryVec,
+                        EmbeddingService.DeserializeEmbedding(c.Embedding))
+        })
+        .OrderByDescending(r => r.Score)
+        .Take(topK);
+
+    // 4. Format as context string for Claude
+    return string.Join("\n\n", results.Select(r =>
+        $"[{r.Source}: {r.Title}] (relevance: {r.Score:F2})\n{r.Content}"));
+}</code></pre>
+
+    <h3>Cosine Similarity</h3>
+    <p>Measures the angle between two vectors. 1.0 = identical direction, 0.0 = orthogonal, -1.0 = opposite.</p>
+
+<pre><code class="language-csharp">// RagService.cs — pure math, no library needed
+private static float CosineSimilarity(float[] a, float[] b)
+{
+    float dot = 0, normA = 0, normB = 0;
+    for (int i = 0; i &lt; a.Length; i++)
+    {
+        dot   += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
+    return dot / (MathF.Sqrt(normA) * MathF.Sqrt(normB));
+}
+// Formula: cos(&theta;) = (A &middot; B) / (||A|| &times; ||B||)</code></pre>
+
+    <div class="callout callout-warn">
+        <strong>Tenant isolation is enforced at the database query level.</strong> The <code>WHERE CompanyId == companyId</code> filter runs <em>before</em> similarity scoring. Company A's chunks are never loaded into memory when Company B's user searches. This is a pre-filter, not a post-filter &mdash; zero data leakage.
+    </div>
+</div>
+
+
+<!-- ═══ STEP 6 ═══ -->
+<div class="section" id="step6">
+    <div class="step-header">
+        <div class="step-num">6</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Claude Generates a Grounded Answer</h2>
+            <div class="step-meta"><strong>ClaudeApiService.cs</strong> &mdash; The retrieved chunks go back to Claude as a tool_result, and Claude answers from them.</div>
+        </div>
+    </div>
+
+    <p>The agentic loop sends the retrieval results back to Claude as a <code>tool_result</code> message. Claude now has the actual recipe data in its context:</p>
+
+<pre><code class="language-json">// What Claude receives as the tool_result
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "tool_result",
+      "tool_use_id": "toolu_01abc...",
+      "content": "[recipe: Chicken Biryani] (relevance: 0.87)\nChicken Biryani: Fragrant basmati rice layered with marinated chicken... Contains: dairy (yogurt in marinade), tree nuts (none). Allergens: dairy. Does NOT contain nuts.\n\n[recipe: Veg Thali] (relevance: 0.42)\nVeg Thali: A complete vegetarian meal...\n\n[recipe: Samosa] (relevance: 0.38)\nSamosa: Crispy deep-fried pastry..."
+    }
+  ]
+}</code></pre>
+
+    <p>Claude reads the retrieved context and generates a <strong>grounded answer</strong>:</p>
+
+    <div class="card">
+        <div class="card-title">Claude's Response</div>
+        <p style="font-style: italic; color: var(--accent3);">&ldquo;No, the chicken biryani does not contain nuts. It's made with basmati rice, chicken marinated in yogurt, ginger-garlic paste, and spices (red chilli, turmeric, garam masala, mint). The only allergen is dairy from the yogurt in the marinade. It's garnished with fried onions and coriander.&rdquo;</p>
+    </div>
+
+    <div class="callout">
+        <strong>Grounded, not hallucinated.</strong> Without RAG, Claude would have guessed from training data. With RAG, it quotes the actual recipe's ingredient list. The answer is traceable to a specific document.
+    </div>
+</div>
+
+
+<!-- ═══ STEP 7 ═══ -->
+<div class="section" id="step7">
+    <div class="step-header">
+        <div class="step-num">7</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Response Streamed to Client</h2>
+            <div class="step-meta"><strong>ChatController.cs</strong> &rarr; <strong>Angular ChatComponent</strong> &mdash; SSE delivers the answer token by token.</div>
+        </div>
+    </div>
+
+    <p>The streaming response includes both the tool activity and the final text. The Angular client renders tool events (so the user sees &ldquo;Searching knowledge base...&rdquo;) and then streams the text answer.</p>
+
+    <table class="kv-table">
+        <tr><th>SSE Event</th><th>When</th><th>What the user sees</th></tr>
+        <tr><td><code>tool_start</code></td><td>Claude calls <code>search_knowledge</code></td><td>&ldquo;Searching knowledge base...&rdquo;</td></tr>
+        <tr><td><code>tool_done</code></td><td>RagService returns results</td><td>Spinner stops</td></tr>
+        <tr><td><code>text_delta</code></td><td>Claude generates answer</td><td>Text appears word by word</td></tr>
+    </table>
+</div>
+
+
+<!-- ═══ INGESTION DEEP-DIVE ═══ -->
+<div class="section" id="ingestion-detail">
+    <h2>Ingestion Deep-Dive</h2>
+
+    <h3>DocumentChunk Model</h3>
+<pre><code class="language-csharp">// Models/DocumentChunk.cs
+public class DocumentChunk
+{
+    public int Id { get; set; }
+    public int CompanyId { get; set; }             // tenant isolation
+    public Company Company { get; set; } = null!;
+    public required string Source { get; set; }     // "recipe" | "policy"
+    public required string Title { get; set; }
+    public required string Content { get; set; }
+    public required byte[] Embedding { get; set; }  // float[] as BLOB
+    public required string ContentHash { get; set; }// SHA-256 for dedup
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}</code></pre>
+
+    <h3>Database Schema</h3>
+<pre><code class="language-csharp">// CanteenDbContext.cs — added to OnModelCreating
+modelBuilder.Entity&lt;DocumentChunk&gt;()
+    .HasIndex(d => new { d.CompanyId, d.ContentHash }).IsUnique();
+modelBuilder.Entity&lt;DocumentChunk&gt;()
+    .HasOne(d => d.Company)
+    .WithMany()
+    .HasForeignKey(d => d.CompanyId)
+    .OnDelete(DeleteBehavior.Restrict);</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+        <tr><td><code>Id</code></td><td>INTEGER PK</td><td>Auto-increment</td></tr>
+        <tr><td><code>CompanyId</code></td><td>INTEGER FK</td><td>Tenant isolation &mdash; every query filters on this</td></tr>
+        <tr><td><code>Source</code></td><td>TEXT</td><td><code>"recipe"</code> or <code>"policy"</code> for filtering/display</td></tr>
+        <tr><td><code>Title</code></td><td>TEXT</td><td>Human-readable label shown in search results</td></tr>
+        <tr><td><code>Content</code></td><td>TEXT</td><td>The full text that Claude reads</td></tr>
+        <tr><td><code>Embedding</code></td><td>BLOB</td><td>3072 floats &times; 4 bytes = ~12 KB</td></tr>
+        <tr><td><code>ContentHash</code></td><td>TEXT</td><td>SHA-256 &mdash; unique with CompanyId for dedup</td></tr>
+        <tr><td><code>CreatedAt</code></td><td>DATETIME</td><td>Ingestion timestamp</td></tr>
+    </table>
+
+    <h3>Seed Data Summary</h3>
+    <table class="kv-table">
+        <tr><th>File</th><th>Company</th><th>Documents</th><th>Type</th></tr>
+        <tr><td><code>recipes.json</code></td><td>TechCorp (1)</td><td>5 recipes</td><td>recipe</td></tr>
+        <tr><td><code>recipes.json</code></td><td>DesignStudio (2)</td><td>5 recipes</td><td>recipe</td></tr>
+        <tr><td><code>policies.json</code></td><td>TechCorp (1)</td><td>5 policies</td><td>policy</td></tr>
+        <tr><td><code>policies.json</code></td><td>DesignStudio (2)</td><td>3 policies</td><td>policy</td></tr>
+        <tr><td colspan="2"><strong>Total</strong></td><td><strong>18 chunks</strong></td><td></td></tr>
+    </table>
+</div>
+
+
+<!-- ═══ FILE MAP ═══ -->
+<div class="section" id="files">
+    <h2>File Map</h2>
+    <table class="kv-table">
+        <tr><th>File</th><th>Role</th><th>Key Method</th></tr>
+        <tr><td><code>Models/DocumentChunk.cs</code></td><td>EF Core entity</td><td>&mdash;</td></tr>
+        <tr><td><code>Data/CanteenDbContext.cs</code></td><td>DbSet + indexes</td><td><code>OnModelCreating</code></td></tr>
+        <tr><td><code>Data/SeedData/recipes.json</code></td><td>Recipe seed data</td><td>&mdash;</td></tr>
+        <tr><td><code>Data/SeedData/policies.json</code></td><td>Policy seed data</td><td>&mdash;</td></tr>
+        <tr><td><code>Services/EmbeddingService.cs</code></td><td>Azure OpenAI embeddings</td><td><code>EmbedAsync</code>, <code>EmbedBatchAsync</code></td></tr>
+        <tr><td><code>Services/RagIngestionService.cs</code></td><td>Startup ingestion</td><td><code>StartAsync</code></td></tr>
+        <tr><td><code>Services/RagService.cs</code></td><td>Vector search</td><td><code>SearchAsync</code></td></tr>
+        <tr><td><code>Services/ChatService.cs</code></td><td>Tool dispatch + definition</td><td><code>DispatchTool</code>, <code>BuildToolDefinitions</code></td></tr>
+        <tr><td><code>Program.cs</code></td><td>DI registration</td><td><code>AddSingleton</code>, <code>AddHostedService</code></td></tr>
+    </table>
+</div>
+
+
+<!-- ═══ INTERVIEW ═══ -->
+<div class="section" id="interview">
+    <h2>Interview One-Liner</h2>
+    <div class="card">
+        <p style="font-size: 16px; line-height: 1.8;">
+            &ldquo;I built a RAG pipeline that runs alongside the existing agentic tool-calling system.
+            On startup, an <code>IHostedService</code> reads recipe and policy documents, embeds them via
+            <strong>Azure OpenAI text-embedding-3-large</strong>, and stores the vectors as BLOBs in SQLite
+            with a SHA-256 content hash for idempotent re-ingestion. At query time, Claude decides whether
+            to call <code>search_knowledge</code> (the same way it calls <code>get_today_menu</code> or
+            <code>place_order</code>), which triggers cosine-similarity search over the company's chunks
+            with a <code>CompanyId</code> pre-filter for tenant isolation, and the top-3 results are injected
+            into Claude's context so it generates grounded answers instead of hallucinating.&rdquo;
+        </p>
+    </div>
+</div>
+
+</div>
+</body>
+</html>

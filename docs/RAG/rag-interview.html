@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG — Interview Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --surface: #ffffff;
+    --ink: #16211f;
+    --muted: #55655f;
+    --line: #d8e2de;
+    --accent: #0f766e;
+    --accent-soft: #d8eeea;
+    --warn: #a14a07;
+    --warn-soft: #fbeedb;
+    --phase: #6d28d9;
+    --phase-soft: #f0ebff;
+    --code-bg: #eaf0ee;
+    --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514;
+      --surface: #151f1d;
+      --ink: #e5eeec;
+      --muted: #94a8a2;
+      --line: #25352f;
+      --accent: #5eead4;
+      --accent-soft: #123430;
+      --warn: #fbbf24;
+      --warn-soft: #302509;
+      --phase: #c4b5fd;
+      --phase-soft: #1e1535;
+      --code-bg: #101a18;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514;
+    --surface: #151f1d;
+    --ink: #e5eeec;
+    --muted: #94a8a2;
+    --line: #25352f;
+    --accent: #5eead4;
+    --accent-soft: #123430;
+    --warn: #fbbf24;
+    --warn-soft: #302509;
+    --phase: #c4b5fd;
+    --phase-soft: #1e1535;
+    --code-bg: #101a18;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--font-body); padding-inline: 16px; padding-block: 24px 64px; }
+  .wrap { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 40px; }
+  @media (max-width: 740px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+
+  header.top { padding-bottom: 28px; }
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  h1 { font: 700 clamp(32px, 6vw, 52px)/1.05 var(--font-display); letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font: 700 18px/1.3 var(--font-display); margin: 18px 0 8px; }
+  .lede { font-size: 18px; max-width: 62ch; color: var(--muted); margin: 0; }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  a { color: var(--accent); }
+  ul, ol { max-width: 72ch; padding-left: 24px; margin: 0 0 14px; }
+  li { margin-bottom: 4px; }
+  code { font-family: var(--font-mono); font-size: 0.9em; background: var(--code-bg); padding: 2px 5px; border-radius: 4px; }
+  pre { background: var(--code-bg); border-radius: 8px; padding: 16px; overflow-x: auto; font: 400 13.5px/1.55 var(--font-mono); margin: 0 0 18px; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  section { padding-block: 32px 8px; border-top: 1px solid var(--line); margin-top: 8px; }
+  strong { font-weight: 600; }
+
+  nav.toc { position: sticky; top: 24px; align-self: start; }
+  nav.toc p { font: 600 12px/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin-bottom: 6px; }
+  nav.toc a { text-decoration: none; font-size: 14px; color: var(--muted); border-left: 2px solid transparent; padding-left: 10px; display: block; }
+  nav.toc a:hover { color: var(--accent); border-left-color: var(--accent); }
+  @media (max-width: 740px) { nav.toc { position: static; margin-bottom: 16px; } }
+
+  .chip { display: inline-block; font: 500 12px/1 var(--font-mono); padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .chip.plain { background: var(--code-bg); color: var(--muted); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.phase { background: var(--phase-soft); color: var(--phase); }
+
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 18px; max-width: 72ch; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note p:last-child { margin-bottom: 0; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .cols > div { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .cols h3 { margin-top: 0; }
+  .cols p:last-child, .cols ul:last-child { margin-bottom: 0; }
+
+  .qa { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0; margin: 0 0 16px; overflow: hidden; }
+  .qa summary { padding: 14px 18px; cursor: pointer; font: 600 15px/1.4 var(--font-display); color: var(--ink); list-style: none; display: flex; align-items: flex-start; gap: 10px; }
+  .qa summary::before { content: 'Q'; font: 600 12px/22px var(--font-mono); min-width: 22px; height: 22px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+  .qa summary::-webkit-details-marker { display: none; }
+  .qa[open] summary { border-bottom: 1px solid var(--line); }
+  .qa .answer { padding: 14px 18px 6px; }
+  .qa .answer::before { content: 'A'; font: 600 12px/22px var(--font-mono); min-width: 22px; height: 22px; text-align: center; border-radius: 50%; background: var(--phase-soft); color: var(--phase); display: inline-block; margin-right: 8px; vertical-align: top; }
+  .qa pre { margin-top: 10px; }
+
+  ol.trace { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; margin: 0 0 18px; max-width: none; }
+  ol.trace li { counter-increment: s; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0; }
+  ol.trace li::before { content: counter(s); font: 600 14px/28px var(--font-mono); width: 28px; height: 28px; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+  ol.trace li > div > :last-child { margin-bottom: 0; }
+  ol.trace b { display: block; margin-bottom: 2px; }
+
+  .diagram { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 0 0 20px; }
+  .diagram svg { display: block; min-width: 720px; width: 100%; height: auto; }
+
+  .scroll { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  @media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#what-is-rag">What is RAG?</a></li>
+      <li><a href="#why-rag">Why RAG here?</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#design-decisions">Design decisions</a></li>
+      <li><a href="#walkthrough">Step-by-step walkthrough</a></li>
+      <li><a href="#code-deep-dive">Code deep-dive</a></li>
+      <li><a href="#document-types">Document types</a></li>
+      <li><a href="#interview-qa">Interview Q&amp;A</a></li>
+      <li><a href="#comparison">RAG vs others</a></li>
+      <li><a href="#production">Production considerations</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">company-canteen &middot; interview prep</p>
+      <h1>Retrieval-Augmented Generation (RAG)</h1>
+      <p class="lede">An interview guide explaining the RAG pattern &mdash; where relevant documents are retrieved via vector similarity search and injected into the LLM's context to ground answers in real knowledge. Covers architecture, embedding choices, chunking strategy, the full retrieval pipeline, annotated code walkthrough, and 15+ interview Q&amp;A.</p>
+    </header>
+
+    <!-- ================================================================ -->
+    <section id="what-is-rag">
+      <h2>What is RAG?</h2>
+      <p><strong>Retrieval-Augmented Generation</strong> is a pattern where an LLM's response is grounded in externally retrieved documents rather than relying solely on its training data. Before the model generates an answer, the system searches a knowledge base for relevant content and injects it into the prompt as context.</p>
+
+      <div class="cols">
+        <div>
+          <h3>Without RAG <span class="chip warn">hallucination risk</span></h3>
+          <p>User: "Does the paneer tikka contain nuts?"</p>
+          <p>Claude answers from training data &mdash; it doesn't know <em>your</em> recipes. It might hallucinate or say "I don't know."</p>
+        </div>
+        <div>
+          <h3>With RAG <span class="chip">grounded</span></h3>
+          <p>User: "Does the paneer tikka contain nuts?"</p>
+          <p>System retrieves the paneer tikka recipe (ingredients: paneer, bell peppers, yogurt, spices &mdash; no nuts). Claude answers accurately from real data.</p>
+        </div>
+      </div>
+
+      <h3>The core formula</h3>
+      <pre><code>Augmented Prompt = System Prompt + Retrieved Documents + User Question</code></pre>
+      <p>The LLM never sees the vector store or the search process. It just gets a richer prompt with relevant context already included.</p>
+
+      <div class="note">
+        <p><strong>Key insight:</strong> RAG doesn't change the model &mdash; it changes the <em>input</em>. The model is the same Claude Haiku you'd call without RAG. The magic is in what you put in front of it.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="why-rag">
+      <h2>Why RAG in our canteen app?</h2>
+      <p>Our chat assistant already handles <strong>structured data</strong> via tool calling (menu items, orders, stock from the database). But there are questions it can't answer because the information doesn't exist in any database table:</p>
+
+      <div class="cols">
+        <div>
+          <h3>Tool calling handles <span class="chip plain">structured</span></h3>
+          <ul>
+            <li>"What's on the menu today?"</li>
+            <li>"Place an order for 2 biryanis"</li>
+            <li>"What's my order status?"</li>
+          </ul>
+          <p>All answered by querying <code>MenuItems</code>, <code>Orders</code>, <code>DailyStocks</code> tables.</p>
+        </div>
+        <div>
+          <h3>RAG handles <span class="chip">unstructured</span></h3>
+          <ul>
+            <li>"Does the biryani contain nuts?"</li>
+            <li>"What's the cancellation policy?"</li>
+            <li>"Is the cold coffee vegan?"</li>
+            <li>"What are canteen hours during holidays?"</li>
+          </ul>
+          <p>Answered from recipe documents and policy/FAQ text that doesn't fit in relational columns.</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <p><strong>The decision rule:</strong> If the answer lives in a <em>database column</em>, use tool calling or Text-to-SQL. If the answer lives in a <em>document</em> (free-form text, recipes, policies, manuals), use RAG.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <p>RAG has two phases: an offline <strong>ingestion</strong> phase (run at startup or when documents change) and a real-time <strong>query</strong> phase (run on every user question).</p>
+
+      <h3>Phase 1: Ingestion (startup / document change)</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 780 160" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#0f766e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <rect x="30" y="40" width="140" height="70" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+          <text x="100" y="68" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">Documents</text>
+          <text x="100" y="88" text-anchor="middle" fill="var(--muted)" font-family="var(--font-body)" font-size="12">Recipes, policies</text>
+
+          <line x1="170" y1="75" x2="218" y2="75" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a1)"/>
+
+          <rect x="220" y="40" width="140" height="70" rx="8" fill="var(--code-bg)" stroke="var(--line)" stroke-width="1"/>
+          <text x="290" y="68" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">Chunker</text>
+          <text x="290" y="88" text-anchor="middle" fill="var(--muted)" font-family="var(--font-body)" font-size="12">Split by document</text>
+
+          <line x1="360" y1="75" x2="408" y2="75" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a1)"/>
+
+          <rect x="410" y="40" width="160" height="70" rx="8" fill="var(--phase-soft)" stroke="var(--phase)" stroke-width="1"/>
+          <text x="490" y="68" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">Azure OpenAI</text>
+          <text x="490" y="88" text-anchor="middle" fill="var(--muted)" font-family="var(--font-body)" font-size="12">text-embedding-3-large</text>
+
+          <line x1="570" y1="75" x2="618" y2="75" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a1)"/>
+
+          <rect x="620" y="40" width="130" height="70" rx="8" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1"/>
+          <text x="685" y="68" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">SQLite</text>
+          <text x="685" y="88" text-anchor="middle" fill="var(--muted)" font-family="var(--font-body)" font-size="12">DocumentChunks</text>
+        </svg>
+      </div>
+
+      <h3>Phase 2: Query time</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 780 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#0f766e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <!-- Row 1: Question -> Embed -> Search -->
+          <rect x="30" y="30" width="140" height="50" rx="8" fill="var(--code-bg)" stroke="var(--line)" stroke-width="1"/>
+          <text x="100" y="60" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">User question</text>
+
+          <line x1="170" y1="55" x2="218" y2="55" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a2)"/>
+
+          <rect x="220" y="30" width="160" height="50" rx="8" fill="var(--phase-soft)" stroke="var(--phase)" stroke-width="1"/>
+          <text x="300" y="60" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">Embed query</text>
+
+          <line x1="380" y1="55" x2="428" y2="55" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a2)"/>
+
+          <rect x="430" y="30" width="160" height="50" rx="8" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1"/>
+          <text x="510" y="60" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">Vector search</text>
+
+          <!-- Down arrow from search to top-k -->
+          <line x1="510" y1="80" x2="510" y2="118" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a2)"/>
+
+          <!-- Row 2: Top-K results -->
+          <rect x="380" y="120" width="260" height="50" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+          <text x="510" y="150" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">Top-K relevant chunks</text>
+
+          <!-- Down from user question to augmented prompt -->
+          <line x1="100" y1="80" x2="100" y2="200" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="100" y1="200" x2="168" y2="200" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a2)"/>
+
+          <!-- Down from top-k to augmented prompt -->
+          <line x1="510" y1="170" x2="510" y2="200" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="510" y1="200" x2="472" y2="200" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a2)"/>
+
+          <!-- Row 3: Augmented prompt -->
+          <rect x="170" y="180" width="300" height="50" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+          <text x="320" y="210" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">Augmented prompt</text>
+
+          <!-- Down to Claude -->
+          <line x1="320" y1="230" x2="320" y2="258" stroke="#0f766e" stroke-width="1.5" marker-end="url(#a2)"/>
+
+          <rect x="220" y="260" width="200" height="50" rx="8" fill="var(--phase-soft)" stroke="var(--phase)" stroke-width="1"/>
+          <text x="320" y="282" text-anchor="middle" fill="var(--ink)" font-family="var(--font-body)" font-size="14" font-weight="600">Claude Haiku</text>
+          <text x="320" y="298" text-anchor="middle" fill="var(--muted)" font-family="var(--font-body)" font-size="12">Grounded answer</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="design-decisions">
+      <h2>Design decisions</h2>
+
+      <h3>Embedding model</h3>
+      <div class="scroll">
+        <table>
+          <tr><th>Option</th><th>Dimensions</th><th>Cost</th><th>Our choice</th></tr>
+          <tr>
+            <td><code>text-embedding-3-large</code> via Azure OpenAI</td>
+            <td>3,072</td>
+            <td>$0.13 / 1M tokens</td>
+            <td><span class="chip">selected</span></td>
+          </tr>
+          <tr>
+            <td><code>text-embedding-3-small</code> via OpenAI</td>
+            <td>1,536</td>
+            <td>$0.02 / 1M tokens</td>
+            <td><span class="chip plain">cheaper alternative</span></td>
+          </tr>
+          <tr>
+            <td><code>voyage-3-lite</code> via Voyage AI</td>
+            <td>512</td>
+            <td>$0.02 / 1M tokens</td>
+            <td><span class="chip plain">Anthropic partner</span></td>
+          </tr>
+          <tr>
+            <td><code>all-MiniLM-L6-v2</code> local ONNX</td>
+            <td>384</td>
+            <td>Free</td>
+            <td><span class="chip plain">offline option</span></td>
+          </tr>
+        </table>
+      </div>
+      <div class="note">
+        <p><strong>Why Azure OpenAI?</strong> Enterprise-grade managed endpoint with SLA, regional deployment, and API key management. <code>text-embedding-3-large</code> gives 3,072 dimensions for best retrieval quality. For our small corpus the extra dimensions don't hurt latency or storage. In production with millions of documents, you'd benchmark <code>small</code> vs <code>large</code> and consider dimensionality reduction.</p>
+      </div>
+      <div class="note">
+        <p><strong>Interview talking point:</strong> "We intentionally use a different provider for embeddings (Azure OpenAI) than for generation (Anthropic Claude). This is a real-world pattern &mdash; embedding and generation are independent capabilities, and you should pick the best tool for each job."</p>
+      </div>
+
+      <h3>Vector store</h3>
+      <div class="scroll">
+        <table>
+          <tr><th>Option</th><th>Persistence</th><th>Search type</th><th>Our choice</th></tr>
+          <tr>
+            <td>SQLite (BLOB column)</td>
+            <td>Persistent, same DB</td>
+            <td>Exact (brute-force cosine)</td>
+            <td><span class="chip">selected</span></td>
+          </tr>
+          <tr>
+            <td>In-memory <code>List&lt;&gt;</code></td>
+            <td>Lost on restart</td>
+            <td>Exact cosine</td>
+            <td><span class="chip warn">rejected</span></td>
+          </tr>
+          <tr>
+            <td>Qdrant / Pinecone</td>
+            <td>Persistent, separate service</td>
+            <td>ANN (HNSW)</td>
+            <td><span class="chip plain">overkill</span></td>
+          </tr>
+          <tr>
+            <td>pgvector (PostgreSQL)</td>
+            <td>Persistent</td>
+            <td>ANN (IVFFlat / HNSW)</td>
+            <td><span class="chip plain">production option</span></td>
+          </tr>
+        </table>
+      </div>
+      <div class="note">
+        <p><strong>Why SQLite?</strong> We already use it. Embeddings persist across restarts. For ~100 documents, brute-force cosine similarity is sub-millisecond. No new infrastructure needed. At scale, swap to pgvector or Qdrant &mdash; the application code stays the same, only the storage layer changes.</p>
+      </div>
+
+      <h3>Chunking strategy</h3>
+      <p>Our documents are <strong>naturally pre-chunked</strong>:</p>
+      <ul>
+        <li><strong>Recipes:</strong> one chunk per recipe (name + ingredients + allergens + prep method) &mdash; each is a coherent semantic unit under ~500 tokens</li>
+        <li><strong>Policies:</strong> one chunk per FAQ entry or policy section</li>
+      </ul>
+      <div class="note">
+        <p><strong>Interview talking point:</strong> "We didn't need recursive text splitting because each document was already a coherent unit. Chunking strategy should match your document structure &mdash; for a large PDF you'd use recursive splitting with overlap, but for discrete recipes and FAQ entries, one chunk per document preserves context perfectly."</p>
+      </div>
+
+      <h3>Integration point</h3>
+      <p>RAG is exposed as a <strong>tool inside the existing ChatService</strong>. When the user asks a knowledge question, Claude calls a <code>search_knowledge</code> tool that performs vector search and returns relevant document chunks. This means:</p>
+      <ul>
+        <li>The same conversation can seamlessly mix tool calling (orders, menu) with RAG (recipes, policies)</li>
+        <li>Claude decides <em>when</em> to retrieve &mdash; it doesn't search for every message, only when it needs knowledge</li>
+        <li>No new API endpoint needed &mdash; works through the existing chat interface</li>
+      </ul>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="walkthrough">
+      <h2>Step-by-step walkthrough</h2>
+      <p>Here's what happens when a user asks <strong>"Does the chicken biryani contain nuts?"</strong></p>
+
+      <ol class="trace">
+        <li><div>
+          <b>User sends message</b>
+          <p>The message arrives at <code>ChatController</code> and flows into <code>ChatService</code> with the full conversation history.</p>
+        </div></li>
+        <li><div>
+          <b>Claude receives the message + tool definitions</b>
+          <p>Claude sees the user question plus the available tools: <code>get_today_menu</code>, <code>place_order</code>, and the new <code>search_knowledge</code>. It decides this is a knowledge question and calls <code>search_knowledge</code> with query "chicken biryani nuts allergens ingredients".</p>
+        </div></li>
+        <li><div>
+          <b>Query embedding</b>
+          <p><code>RagService</code> sends the search query to Azure OpenAI's <code>text-embedding-3-large</code> endpoint. Returns a 3,072-dimensional vector.</p>
+        </div></li>
+        <li><div>
+          <b>Vector search</b>
+          <p>The service loads all document embeddings from the <code>DocumentChunks</code> SQLite table, computes cosine similarity against the query vector, and returns the top-K (default: 3) most similar chunks.</p>
+          <pre><code>cosine_similarity(query_vector, doc_vector) =
+    dot(q, d) / (||q|| * ||d||)</code></pre>
+        </div></li>
+        <li><div>
+          <b>Return context to Claude</b>
+          <p>The top-K chunks are returned as the tool result. For this query, the top match is the Chicken Biryani recipe: "Ingredients: basmati rice, chicken, yogurt, onions, ginger, garlic, biryani spices, saffron, ghee. Allergens: dairy (yogurt, ghee). No nuts."</p>
+        </div></li>
+        <li><div>
+          <b>Claude generates grounded answer</b>
+          <p>Claude reads the retrieved recipe and responds: "No, the chicken biryani does not contain nuts. Its ingredients are basmati rice, chicken, yogurt, onions, ginger, garlic, biryani spices, saffron, and ghee. Note that it does contain dairy (yogurt and ghee)."</p>
+        </div></li>
+      </ol>
+
+      <div class="note">
+        <p><strong>Key point:</strong> Claude decided on its own to call <code>search_knowledge</code>. If the user had asked "Show me today's menu" instead, Claude would have called <code>get_today_menu</code>. The agent picks the right tool based on the question.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="code-deep-dive">
+      <h2>Code deep-dive</h2>
+
+      <h3>Database model: DocumentChunk</h3>
+      <pre><code>public class DocumentChunk
+{
+    public int Id { get; set; }
+    public int CompanyId { get; set; }
+    public string Source { get; set; }       // "recipe" | "policy"
+    public string Title { get; set; }        // "Chicken Biryani" | "Cancellation Policy"
+    public string Content { get; set; }      // Full text of the chunk
+    public byte[] Embedding { get; set; }    // float[] serialized as BLOB
+    public DateTime CreatedAt { get; set; }
+}</code></pre>
+
+      <h3>Embedding service</h3>
+      <pre><code>public class EmbeddingService
+{
+    private readonly HttpClient _http;
+    private readonly string _endpoint;  // Azure OpenAI endpoint
+    private readonly string _apiKey;
+
+    public async Task&lt;float[]&gt; EmbedAsync(string text)
+    {
+        // POST to Azure OpenAI embeddings endpoint
+        // Model: text-embedding-3-large
+        // Returns: 3,072-dimensional float array
+    }
+
+    public async Task&lt;float[][]&gt; EmbedBatchAsync(IEnumerable&lt;string&gt; texts)
+    {
+        // Batch embedding for ingestion efficiency
+        // Azure OpenAI supports up to 2,048 inputs per request
+    }
+}</code></pre>
+
+      <h3>RAG service</h3>
+      <pre><code>public class RagService
+{
+    public async Task&lt;string&gt; SearchAsync(string query, int companyId, int topK = 3)
+    {
+        // 1. Embed the query
+        float[] queryVec = await _embedding.EmbedAsync(query);
+
+        // 2. Load all document embeddings for this company
+        var chunks = await _db.DocumentChunks
+            .Where(c => c.CompanyId == companyId)
+            .ToListAsync();
+
+        // 3. Compute cosine similarity and rank
+        var results = chunks
+            .Select(c => new {
+                c.Title, c.Content, c.Source,
+                Score = CosineSimilarity(queryVec, DeserializeEmbedding(c.Embedding))
+            })
+            .OrderByDescending(r => r.Score)
+            .Take(topK);
+
+        // 4. Format as context string for Claude
+        return string.Join("\n\n", results.Select(r =>
+            $"[{r.Source}: {r.Title}] (relevance: {r.Score:F2})\n{r.Content}"));
+    }
+
+    private static float CosineSimilarity(float[] a, float[] b)
+    {
+        float dot = 0, normA = 0, normB = 0;
+        for (int i = 0; i &lt; a.Length; i++)
+        {
+            dot += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+        return dot / (MathF.Sqrt(normA) * MathF.Sqrt(normB));
+    }
+}</code></pre>
+
+      <h3>Tool definition in ChatService</h3>
+      <pre><code>new Tool
+{
+    Name = "search_knowledge",
+    Description = "Search the canteen knowledge base for information about " +
+                  "recipes, ingredients, allergens, nutrition, canteen policies, " +
+                  "FAQ, and operating procedures. Call this when the user asks " +
+                  "about food content, dietary info, or canteen rules.",
+    InputSchema = new {
+        type = "object",
+        properties = new {
+            query = new {
+                type = "string",
+                description = "The search query describing what information is needed"
+            }
+        },
+        required = new[] { "query" }
+    }
+}</code></pre>
+
+      <h3>Ingestion pipeline (startup)</h3>
+      <pre><code>public class RagIngestionService : IHostedService
+{
+    public async Task StartAsync(CancellationToken ct)
+    {
+        // 1. Load documents from seed data or JSON files
+        var recipes = LoadRecipeDocuments();
+        var policies = LoadPolicyDocuments();
+
+        // 2. Check which are already embedded (by title + content hash)
+        // 3. Embed new/changed documents in batch
+        // 4. Upsert into DocumentChunks table
+    }
+}</code></pre>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="document-types">
+      <h2>Document types</h2>
+
+      <div class="cols">
+        <div>
+          <h3>Recipe documents <span class="chip">RAG</span></h3>
+          <p>Each recipe is one chunk containing:</p>
+          <ul>
+            <li>Name and description</li>
+            <li>Full ingredient list</li>
+            <li>Allergen information</li>
+            <li>Dietary tags (vegan, gluten-free)</li>
+            <li>Preparation notes</li>
+            <li>Nutritional info (calories, protein)</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Policy / FAQ documents <span class="chip">RAG</span></h3>
+          <p>Each policy section is one chunk:</p>
+          <ul>
+            <li>Cancellation / refund policy</li>
+            <li>Operating hours (regular, holidays)</li>
+            <li>Ordering limits and rules</li>
+            <li>Payment methods accepted</li>
+            <li>Hygiene and food safety certifications</li>
+            <li>Bulk / meeting order process</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note warn">
+        <p><strong>What NOT to put in RAG:</strong> Menu items, prices, stock, orders, and bills are <em>structured data</em> that changes frequently. They belong in the database, accessed via tool calling or Text-to-SQL. RAG is for semi-static <em>knowledge</em> documents.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="interview-qa">
+      <h2>Interview Q&amp;A</h2>
+
+      <details class="qa">
+        <summary>What is RAG and why do you need it?</summary>
+        <div class="answer">
+          <p>RAG grounds LLM answers in external knowledge. Without it, the model relies on training data and can hallucinate about domain-specific facts. In our canteen app, Claude doesn't know our actual recipes or policies from training &mdash; RAG injects the real documents so it can answer accurately.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Why did you use a different provider for embeddings (OpenAI) vs generation (Claude)?</summary>
+        <div class="answer">
+          <p>Embedding and generation are independent capabilities. We picked <code>text-embedding-3-large</code> from Azure OpenAI because it offers 3,072 dimensions with excellent retrieval quality. Claude doesn't offer an embedding API &mdash; Anthropic recommends Voyage AI as a partner, but OpenAI's embeddings are industry-standard and well-documented. Using different providers is a common production pattern.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Why text-embedding-3-large instead of small? Isn't it overkill?</summary>
+        <div class="answer">
+          <p>For ~100 documents, yes, <code>small</code> would work fine. We chose <code>large</code> because: (1) higher recall quality matters more than cost at our scale, (2) the extra dimensions don't hurt performance for a small corpus, and (3) it shows understanding of the quality/cost tradeoff. In production with millions of documents, you'd benchmark both and potentially use dimensionality reduction (OpenAI supports reducing 3,072 to 256 dims via Matryoshka representation).</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Why store vectors in SQLite instead of a dedicated vector database?</summary>
+        <div class="answer">
+          <p>Our corpus is ~100 documents. Brute-force cosine similarity over 100 vectors takes under 1ms. Adding Qdrant or Pinecone would introduce infrastructure complexity (Docker, cloud service) for zero benefit at this scale. The application code is abstracted behind <code>RagService</code> &mdash; swapping to pgvector or Qdrant later means changing one class, not the architecture.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How does cosine similarity work?</summary>
+        <div class="answer">
+          <p>Cosine similarity measures the angle between two vectors, ignoring magnitude. It's the dot product of the two vectors divided by the product of their magnitudes. A score of 1.0 means identical direction (semantically identical), 0 means orthogonal (unrelated), and -1 means opposite. For normalized embeddings (which OpenAI returns), cosine similarity equals the dot product.</p>
+          <pre><code>cos(A, B) = (A &middot; B) / (||A|| &times; ||B||)
+// Range: -1 to 1 (practically 0 to 1 for text embeddings)</code></pre>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What's the difference between exact search and ANN (approximate nearest neighbor)?</summary>
+        <div class="answer">
+          <p><strong>Exact search</strong> compares the query vector against every stored vector. O(n) per query. Perfect for small corpora (&lt;10K docs). <strong>ANN</strong> (used by Qdrant, Pinecone, pgvector) builds an index (HNSW, IVFFlat) that finds approximate nearest neighbors in O(log n). Trades a small accuracy loss (~1-5%) for massive speed gains. Essential above ~100K documents.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What if the right document doesn't appear in the top-K results?</summary>
+        <div class="answer">
+          <p>This is the core RAG recall problem. Solutions ranked by impact:</p>
+          <ol>
+            <li><strong>Re-ranking:</strong> Retrieve top-30 cheaply, then run a cross-encoder reranker (Cohere Rerank, ColBERT) to re-score and keep top-5. Cross-encoders attend to query-document pairs jointly, catching matches cosine similarity misses.</li>
+            <li><strong>Hybrid search:</strong> Combine dense embeddings with BM25 (keyword search) using Reciprocal Rank Fusion. Catches exact-term matches that embeddings underweight.</li>
+            <li><strong>Query transformation:</strong> Use HyDE (generate a hypothetical answer, embed that) or multi-query (rephrase the question 3-4 ways, union results).</li>
+            <li><strong>Better chunking:</strong> Smaller chunks with overlap, or semantic chunking. Index small chunks but attach parent context at retrieval time.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What's chunking and why does it matter?</summary>
+        <div class="answer">
+          <p>Chunking splits large documents into smaller pieces for embedding. It matters because: (1) embedding models have token limits (8K for text-embedding-3), (2) smaller chunks are more semantically focused &mdash; a whole book would dilute the signal, and (3) you want to retrieve only the relevant part, not an entire document. Common strategies: fixed-size with overlap, recursive (split on paragraphs, then sentences), semantic (split on topic shifts). We use document-level chunking because each recipe/FAQ entry is already a coherent unit under 500 tokens.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How do you handle document updates?</summary>
+        <div class="answer">
+          <p>We hash each document's content. On startup (or when an admin updates a recipe), the ingestion service compares hashes against stored chunks. Changed documents get re-embedded and upserted. Deleted documents have their chunks removed. This avoids re-embedding the entire corpus on every restart.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What's the difference between RAG and fine-tuning?</summary>
+        <div class="answer">
+          <p><strong>RAG</strong> adds knowledge at query time by injecting retrieved documents into the prompt. The model weights don't change. Best for: factual recall, frequently changing data, citing sources. <strong>Fine-tuning</strong> changes the model's weights by training on your data. Best for: changing the model's behavior/style, learning domain-specific patterns. RAG is cheaper, faster to update, and doesn't risk catastrophic forgetting. Fine-tuning is more permanent and better for behavioral changes. Most teams start with RAG.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How do you prevent hallucination even with RAG?</summary>
+        <div class="answer">
+          <p>RAG reduces hallucination but doesn't eliminate it. Defenses: (1) Instruct the model in the system prompt: "Answer only from the provided context. If the information isn't in the context, say you don't know." (2) Include relevance scores &mdash; if the top result's similarity is below a threshold (e.g., 0.3), tell the model no relevant documents were found. (3) Ask the model to cite which document it's drawing from. (4) Post-generation validation: check if the answer references information not present in the retrieved chunks.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What's the embedding dimension tradeoff?</summary>
+        <div class="answer">
+          <p>Higher dimensions capture more semantic nuance but cost more storage and compute. <code>text-embedding-3-small</code> (1,536 dims) vs <code>large</code> (3,072 dims): large is ~2x storage and slightly slower similarity computation, but better at distinguishing subtle differences. OpenAI's Matryoshka representation lets you truncate <code>large</code> embeddings to 256 dims with minimal quality loss &mdash; useful for production systems that need fast approximate search.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Why is RAG exposed as a tool rather than always running?</summary>
+        <div class="answer">
+          <p>Not every question needs document retrieval. "Place an order for 2 biryanis" doesn't need RAG &mdash; it needs the <code>place_order</code> tool. By exposing RAG as a <code>search_knowledge</code> tool, Claude decides when to use it. This avoids wasting embedding API calls and context window space on irrelevant retrievals. It also lets the same conversation seamlessly combine tool calling (actions) with RAG (knowledge).</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How would you scale this to millions of documents?</summary>
+        <div class="answer">
+          <p>Three changes: (1) <strong>Vector database:</strong> swap SQLite for pgvector (PostgreSQL) or Qdrant, which use HNSW indexes for O(log n) approximate search. (2) <strong>Chunking pipeline:</strong> move from startup ingestion to an async pipeline (queue + worker) that processes document changes incrementally. (3) <strong>Re-ranking:</strong> add a cross-encoder re-ranker between retrieval and generation. Retrieve top-50 with ANN, re-rank to top-5 with a model like Cohere Rerank. The RAG service interface stays identical &mdash; only the implementation changes.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What about multi-tenancy in RAG?</summary>
+        <div class="answer">
+          <p>Each document chunk has a <code>CompanyId</code>. The vector search filters by <code>CompanyId</code> before computing similarity &mdash; Company A's users never see Company B's recipes. This matches our existing multi-tenant pattern across the app. In a production vector database, you'd use metadata filtering (Qdrant) or row-level security (pgvector) for the same isolation.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="comparison">
+      <h2>RAG vs other approaches</h2>
+
+      <div class="scroll">
+        <table>
+          <tr>
+            <th>Approach</th>
+            <th>Best for</th>
+            <th>Data type</th>
+            <th>Our usage</th>
+          </tr>
+          <tr>
+            <td><strong>Tool calling</strong></td>
+            <td>Actions with side effects</td>
+            <td>Structured (DB tables)</td>
+            <td>Ordering, menu browsing</td>
+          </tr>
+          <tr>
+            <td><strong>Text-to-SQL</strong></td>
+            <td>Open-ended analytics</td>
+            <td>Structured (DB tables)</td>
+            <td>Admin dashboard queries</td>
+          </tr>
+          <tr>
+            <td><strong>RAG</strong></td>
+            <td>Knowledge questions</td>
+            <td>Unstructured (documents)</td>
+            <td>Recipes, allergens, policies</td>
+          </tr>
+          <tr>
+            <td>Fine-tuning</td>
+            <td>Behavioral changes</td>
+            <td>Training examples</td>
+            <td>Not needed here</td>
+          </tr>
+          <tr>
+            <td>Long context stuffing</td>
+            <td>Small, static knowledge</td>
+            <td>Fits in one prompt</td>
+            <td>Too rigid for growing docs</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="note">
+        <p><strong>Interview talking point:</strong> "Our canteen app uses three AI patterns in one system: tool calling for actions, Text-to-SQL for analytics, and RAG for knowledge &mdash; each chosen to match the data type and use case. This shows I can evaluate patterns against requirements, not just default to one approach."</p>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <section id="production">
+      <h2>Production considerations</h2>
+
+      <h3>What we implemented</h3>
+      <ul>
+        <li><strong>Multi-tenant isolation:</strong> <code>CompanyId</code> filter on every vector search</li>
+        <li><strong>Persistent storage:</strong> SQLite BLOB column survives restarts</li>
+        <li><strong>Content hashing:</strong> Only re-embed changed documents on startup</li>
+        <li><strong>Relevance threshold:</strong> Don't return chunks below a minimum similarity score</li>
+        <li><strong>Graceful degradation:</strong> If the embedding API is down, the chat still works (tool calling still functions, just no knowledge retrieval)</li>
+      </ul>
+
+      <h3>What we'd add at scale</h3>
+      <ul>
+        <li><strong>Re-ranking:</strong> Cross-encoder reranker (Cohere Rerank) between retrieval and generation</li>
+        <li><strong>Hybrid search:</strong> Combine vector similarity with BM25 keyword search</li>
+        <li><strong>Async ingestion:</strong> Queue-based pipeline for processing document updates</li>
+        <li><strong>Caching:</strong> Cache embeddings for frequent queries (LRU cache on the embedding service)</li>
+        <li><strong>Monitoring:</strong> Track retrieval quality &mdash; relevance scores, user feedback, failed retrievals</li>
+        <li><strong>Evaluation:</strong> Build a test set of question/answer pairs to measure retrieval recall and generation accuracy</li>
+      </ul>
+
+      <div class="note warn">
+        <p><strong>Common RAG pitfall:</strong> Don't put structured data into RAG. Menu prices, stock levels, and order history change constantly and are already perfectly served by SQL queries. RAG is for semi-static knowledge documents. Mixing these leads to stale answers and unnecessary complexity.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>Canteen Connect &mdash; RAG Interview Guide &middot; Part of the <a href="index.html">documentation suite</a></p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

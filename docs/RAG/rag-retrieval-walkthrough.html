@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG Retrieval — Step-by-Step Walkthrough</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent2: #818cf8;
+            --accent3: #34d399;
+            --accent4: #f472b6;
+            --code-bg: #0d1117;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            display: flex;
+        }
+
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: 280px; height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            overflow-y: auto; padding: 24px 16px;
+            z-index: 100;
+        }
+        .sidebar h2 {
+            font-size: 14px; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--accent);
+            margin-bottom: 16px;
+        }
+        .sidebar a {
+            display: block; padding: 6px 10px; margin: 2px 0;
+            color: var(--muted); text-decoration: none;
+            font-size: 13px; border-radius: 6px;
+            transition: all .2s;
+        }
+        .sidebar a:hover { background: rgba(56,189,248,.1); color: var(--accent); }
+        .sidebar .divider { border-top: 1px solid var(--border); margin: 12px 0; }
+
+        .main { margin-left: 280px; padding: 48px 56px; max-width: 1050px; width: 100%; }
+
+        h1 {
+            font-size: 32px; font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 40px; }
+
+        .section { margin-bottom: 56px; }
+        .section h2 {
+            font-size: 22px; font-weight: 600; color: var(--accent);
+            border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 20px;
+        }
+        .section h3 { font-size: 17px; color: var(--accent2); margin: 20px 0 10px; }
+
+        p, li { color: var(--text); margin-bottom: 10px; }
+        ul, ol { padding-left: 24px; }
+
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; padding: 24px; margin: 16px 0;
+        }
+        .card-title {
+            font-size: 15px; font-weight: 600; color: var(--accent2);
+            margin-bottom: 12px; text-transform: uppercase; letter-spacing: .5px;
+        }
+
+        pre { margin: 14px 0; border-radius: 8px; overflow-x: auto; }
+        pre code { font-size: 13px; line-height: 1.6; }
+        code:not(pre code) {
+            background: var(--code-bg); padding: 2px 6px;
+            border-radius: 4px; font-size: 13px; color: var(--accent3);
+        }
+
+        .kv-table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+        .kv-table th, .kv-table td {
+            text-align: left; padding: 10px 14px;
+            border-bottom: 1px solid var(--border); font-size: 14px;
+        }
+        .kv-table th { color: var(--accent); font-weight: 600; white-space: nowrap; }
+        .kv-table td { color: var(--text); }
+
+        .tag {
+            display: inline-block; padding: 3px 10px; border-radius: 12px;
+            font-size: 12px; font-weight: 600; margin: 2px 4px;
+        }
+        .tag-blue  { background: rgba(56,189,248,.15); color: var(--accent); }
+        .tag-green { background: rgba(52,211,153,.15); color: var(--accent3); }
+        .tag-pink  { background: rgba(244,114,182,.15); color: var(--accent4); }
+        .tag-purple { background: rgba(129,140,248,.15); color: var(--accent2); }
+
+        .callout {
+            background: rgba(56,189,248,.08); border-left: 4px solid var(--accent);
+            padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0;
+        }
+        .callout-warn {
+            background: rgba(251,191,36,.08); border-left: 4px solid #fbbf24;
+        }
+        .callout-green {
+            background: rgba(52,211,153,.08); border-left: 4px solid var(--accent3);
+        }
+
+        .step-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 12px;
+        }
+        .step-num {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #0f172a; font-weight: 800; font-size: 18px;
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .step-meta { font-size: 13px; color: var(--muted); }
+        .step-meta strong { color: var(--accent3); }
+
+        .flow-box {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; padding: 32px; margin: 16px 0;
+        }
+        .flow-box .card-title { margin-bottom: 16px; }
+        .flow-line {
+            font-family: monospace; font-size: 13px; line-height: 2.2;
+        }
+        .flow-line div { margin: 2px 0; }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 24px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <h2>RAG Retrieval</h2>
+    <a href="#overview">Overview &amp; Flow Diagram</a>
+    <div class="divider"></div>
+    <a href="#step1">Step 1 &mdash; Tool Definition</a>
+    <a href="#step2">Step 2 &mdash; Claude Picks the Tool</a>
+    <a href="#step3">Step 3 &mdash; DispatchTool Routing</a>
+    <a href="#step4">Step 4 &mdash; Query Embedding</a>
+    <a href="#step5">Step 5 &mdash; Tenant-Filtered Load</a>
+    <a href="#step6">Step 6 &mdash; Cosine Similarity</a>
+    <a href="#step7">Step 7 &mdash; Format &amp; Return</a>
+    <a href="#step8">Step 8 &mdash; Grounded Answer</a>
+    <div class="divider"></div>
+    <a href="#why-tool">Why Tool-Driven, Not Always-On?</a>
+    <a href="#tenant">Tenant Isolation Deep-Dive</a>
+    <a href="#serialization">Serialization: float[] &harr; byte[]</a>
+    <a href="#interview">Interview Talking Points</a>
+    <div class="divider"></div>
+    <a href="rag-call-chain.html">Full Call Chain (Ingestion + Retrieval)</a>
+    <a href="rag-interview.html">RAG Interview Guide</a>
+</nav>
+
+<div class="main">
+
+<h1>RAG Retrieval &mdash; Step-by-Step Walkthrough</h1>
+<p class="subtitle">
+    How a user&rsquo;s knowledge question travels through the system: from chat input, to Claude&rsquo;s tool decision,
+    through vector search, and back as a grounded answer. 4 files, 5 methods, one round trip.
+</p>
+
+<!-- ═══ OVERVIEW ═══ -->
+<div class="section" id="overview">
+    <h2>Retrieval Flow Diagram</h2>
+    <p>Every knowledge question follows this exact path. The key insight: retrieval is <strong>tool-driven</strong>, not always-on. Claude decides when to search.</p>
+
+    <div class="flow-box">
+        <div class="card-title">The Retrieval Round Trip</div>
+        <div class="flow-line">
+            <div><span class="tag tag-pink">1</span> <strong>User</strong>: &ldquo;Does chicken biryani contain nuts?&rdquo;</div>
+            <div style="padding-left: 36px;">&darr; <code>POST /api/chat/stream</code> &rarr; ChatController extracts userId, companyId from JWT</div>
+            <div style="padding-left: 36px;">&darr; <code>ChatService.SendMessageStream()</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+
+            <div><span class="tag tag-purple">2</span> <strong>Claude sees 3 tools</strong>: <code>get_today_menu</code>, <code>place_order</code>, <code>search_knowledge</code></div>
+            <div style="padding-left: 36px;">&darr; Reads system prompt: &ldquo;use search_knowledge for ingredients, allergens, policies&rdquo;</div>
+            <div style="padding-left: 36px;">&darr; Decides: this is a knowledge question, not an order</div>
+            <div style="padding-left: 36px;">&darr; Returns <code>tool_use</code>: <code>search_knowledge({ "query": "chicken biryani nuts allergens" })</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+
+            <div><span class="tag tag-green">3</span> <strong>DispatchTool</strong> switch matches <code>"search_knowledge"</code></div>
+            <div style="padding-left: 36px;">&darr; Calls <code>ragService.SearchAsync(query, companyId)</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+
+            <div><span class="tag tag-blue">4</span> <strong>EmbedAsync(query)</strong> &rarr; Azure OpenAI &rarr; <code>float[3072]</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+
+            <div><span class="tag tag-blue">5</span> <strong>Load chunks</strong> from SQLite: <code>WHERE CompanyId == companyId</code> (tenant isolation)</div>
+            <div style="padding-left: 24px;">&darr;</div>
+
+            <div><span class="tag tag-purple">6</span> <strong>CosineSimilarity</strong> for each chunk &rarr; <code>OrderByDescending(score).Take(3)</code></div>
+            <div style="padding-left: 24px;">&darr;</div>
+
+            <div><span class="tag tag-green">7</span> <strong>Format</strong>: <code>[recipe: Chicken Biryani] (relevance: 0.87)\n{content}</code></div>
+            <div style="padding-left: 36px;">&darr; String returned as <code>tool_result</code> to Claude</div>
+            <div style="padding-left: 24px;">&darr;</div>
+
+            <div><span class="tag tag-pink">8</span> <strong>Claude generates grounded answer</strong>: &ldquo;No, the chicken biryani does not contain nuts...&rdquo;</div>
+            <div style="padding-left: 36px;">&darr; SSE stream &rarr; Angular client renders token by token</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══ STEP 1 ═══ -->
+<div class="section" id="step1">
+    <div class="step-header">
+        <div class="step-num">1</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Tool Definition &mdash; Teaching Claude About <code>search_knowledge</code></h2>
+            <div class="step-meta"><strong>ChatService.cs</strong> &mdash; <code>BuildToolDefinitions()</code>, lines 198&ndash;215</div>
+        </div>
+    </div>
+
+    <p>Before Claude can use RAG retrieval, it needs to know the tool exists. We define <code>search_knowledge</code> alongside the two existing tools in <code>BuildToolDefinitions()</code>:</p>
+
+<pre><code class="language-csharp">new Tool
+{
+    Name = "search_knowledge",
+    Description = "Search the canteen knowledge base for information about " +
+                  "recipes, ingredients, allergens, nutrition, canteen policies, " +
+                  "FAQ, operating hours, and procedures. Call this when the user " +
+                  "asks about food content, dietary info, or canteen rules.",
+    InputSchema = InputSchema.FromRawUnchecked(new Dictionary&lt;string, JsonElement&gt;
+    {
+        ["type"] = JsonSerializer.Deserialize&lt;JsonElement&gt;("\"object\""),
+        ["properties"] = JsonSerializer.Deserialize&lt;JsonElement&gt;("""
+            {
+                "query": {
+                    "type": "string",
+                    "description": "The search query describing what information is needed"
+                }
+            }
+        """),
+        ["required"] = JsonSerializer.Deserialize&lt;JsonElement&gt;("""["query"]""")
+    })
+}</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Field</th><th>What it does</th></tr>
+        <tr><td><code>Name</code></td><td>The string Claude returns in <code>tool_use</code> blocks &mdash; must match the switch case in <code>DispatchTool</code></td></tr>
+        <tr><td><code>Description</code></td><td>Tells Claude <em>when</em> to use it. The description lists specific triggers: ingredients, allergens, nutrition, policies, operating hours</td></tr>
+        <tr><td><code>InputSchema</code></td><td>One required parameter: <code>query</code> (string). Claude formulates the search query from the user&rsquo;s natural language</td></tr>
+    </table>
+
+    <p>The system prompt also reinforces when to use it:</p>
+
+<pre><code class="language-csharp">SystemPrompt = """
+    ...
+    When users ask about ingredients, allergens, nutrition, recipes, canteen policies,
+    operating hours, or any knowledge-based question, use the search_knowledge tool.
+    ...
+    """</code></pre>
+
+    <div class="callout">
+        <strong>The description is the routing logic.</strong> Claude reads the description to decide whether a tool fits the user&rsquo;s question. A vague description = wrong tool calls. A specific description (&ldquo;recipes, ingredients, allergens, nutrition, canteen policies&rdquo;) = precise routing. This is cheaper and more flexible than writing regex or keyword matching yourself.
+    </div>
+</div>
+
+
+<!-- ═══ STEP 2 ═══ -->
+<div class="section" id="step2">
+    <div class="step-header">
+        <div class="step-num">2</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Claude Picks <code>search_knowledge</code></h2>
+            <div class="step-meta"><strong>ClaudeApiService.cs</strong> &mdash; The agentic loop receives a <code>tool_use</code> response from Claude.</div>
+        </div>
+    </div>
+
+    <p>When the user asks &ldquo;Does chicken biryani contain nuts?&rdquo;, Claude sees three tools and must choose. It reasons:</p>
+    <ul>
+        <li><code>get_today_menu</code> &mdash; retrieves today&rsquo;s menu items and stock. Not relevant.</li>
+        <li><code>place_order</code> &mdash; places an order. Not relevant.</li>
+        <li><code>search_knowledge</code> &mdash; &ldquo;allergens, ingredients, nutrition&rdquo; matches perfectly.</li>
+    </ul>
+
+    <p>Claude returns:</p>
+
+<pre><code class="language-json">{
+  "type": "tool_use",
+  "id": "toolu_01abc...",
+  "name": "search_knowledge",
+  "input": {
+    "query": "chicken biryani nuts allergens ingredients"
+  }
+}</code></pre>
+
+    <div class="callout-warn callout">
+        <strong>Claude reformulates the query.</strong> The user said &ldquo;Does chicken biryani contain nuts?&rdquo; but Claude sends &ldquo;chicken biryani nuts allergens ingredients&rdquo; to the search tool. It strips the question format and adds related terms (allergens, ingredients) to cast a wider net for the embedding search. This is free query expansion &mdash; we didn&rsquo;t code it, Claude does it naturally.
+    </div>
+</div>
+
+
+<!-- ═══ STEP 3 ═══ -->
+<div class="section" id="step3">
+    <div class="step-header">
+        <div class="step-num">3</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">DispatchTool &mdash; String Match to Method Call</h2>
+            <div class="step-meta"><strong>ChatService.cs</strong> &mdash; <code>DispatchTool()</code>, lines 67&ndash;80</div>
+        </div>
+    </div>
+
+    <p>The agentic loop in <code>ClaudeApiService</code> extracts the tool name (<code>"search_knowledge"</code>) and input JSON, then calls the <code>dispatchTool</code> delegate. In <code>ChatService</code>, this is a switch expression:</p>
+
+<pre><code class="language-csharp">private async Task&lt;string&gt; DispatchTool(
+    string toolName, JsonElement input, int userId, int companyId)
+{
+    using var scope = scopeFactory.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService&lt;CanteenDbContext&gt;();
+
+    return toolName switch
+    {
+        "get_today_menu"   => await GetTodayMenu(db, companyId),
+        "place_order"      => await PlaceOrder(db, input, userId, companyId),
+        "search_knowledge" => await ragService.SearchAsync(
+                                  input.GetProperty("query").GetString()!, companyId),
+        var unknown        => throw new NotSupportedException($"Unknown tool '{unknown}'.")
+    };
+}</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Line</th><th>What happens</th></tr>
+        <tr><td><code>input.GetProperty("query")</code></td><td>Extracts the <code>query</code> property from Claude&rsquo;s JSON input</td></tr>
+        <tr><td><code>.GetString()!</code></td><td>Converts to string (the <code>!</code> is null-forgiving &mdash; we know it&rsquo;s present because the schema says <code>required</code>)</td></tr>
+        <tr><td><code>ragService.SearchAsync(..., companyId)</code></td><td>Passes the query and the company ID from the JWT &mdash; this is how tenant isolation starts</td></tr>
+    </table>
+
+    <div class="callout">
+        <strong>No magic.</strong> The mapping is a string match in a switch expression. Claude returns <code>"search_knowledge"</code> as a string, the switch matches it, and calls <code>RagService.SearchAsync()</code>. Same pattern as a controller routing a URL to a method &mdash; the tool name is effectively a &ldquo;route.&rdquo;
+    </div>
+</div>
+
+
+<!-- ═══ STEP 4 ═══ -->
+<div class="section" id="step4">
+    <div class="step-header">
+        <div class="step-num">4</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Query Embedding &mdash; Text to Vector</h2>
+            <div class="step-meta"><strong>EmbeddingService.cs</strong> &mdash; <code>EmbedAsync()</code>, line 14</div>
+        </div>
+    </div>
+
+    <p>Before we can search, the query string must become a vector in the <strong>same embedding space</strong> as the stored documents. If we used a different model or even a different deployment, the similarity scores would be meaningless.</p>
+
+<pre><code class="language-csharp">// RagService.cs line 10 — first thing SearchAsync does
+var queryVec = await embedding.EmbedAsync(query, ct);</code></pre>
+
+    <p><code>EmbedAsync</code> delegates to <code>EmbedBatchAsync</code> with a single-item list:</p>
+
+<pre><code class="language-csharp">// EmbeddingService.cs
+public async Task&lt;float[]&gt; EmbedAsync(string text, CancellationToken ct = default)
+{
+    var results = await EmbedBatchAsync([text], ct);
+    return results[0];
+}
+
+public async Task&lt;List&lt;float[]&gt;&gt; EmbedBatchAsync(
+    IReadOnlyList&lt;string&gt; texts, CancellationToken ct = default)
+{
+    // POST {endpoint}/openai/deployments/text-embedding-3-large/embeddings
+    //      ?api-version=2024-06-01
+    // Header: api-key: {key}
+    // Body: { "input": ["chicken biryani nuts allergens ingredients"] }
+
+    var url = $"{_endpoint.TrimEnd('/')}/openai/deployments/{_deployment}" +
+              "/embeddings?api-version=2024-06-01";
+
+    using var client = httpFactory.CreateClient();
+    client.DefaultRequestHeaders.Add("api-key", _apiKey);
+
+    // ... POST, check status, parse response ...
+
+    // Returns float[3072] — text-embedding-3-large dimension
+    return json.GetProperty("data").EnumerateArray()
+        .OrderBy(d => d.GetProperty("index").GetInt32())
+        .Select(d => d.GetProperty("embedding").EnumerateArray()
+            .Select(v => v.GetSingle()).ToArray())
+        .ToList();
+}</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Detail</th><th>Value</th></tr>
+        <tr><td>Model</td><td><code>text-embedding-3-large</code></td></tr>
+        <tr><td>Dimensions</td><td>3072 floats per vector</td></tr>
+        <tr><td>Auth</td><td><code>api-key</code> header (Azure-style, not Bearer token)</td></tr>
+        <tr><td>Latency</td><td>~50&ndash;100ms for a single query embedding</td></tr>
+        <tr><td>Cost</td><td>~$0.00013 per query (negligible)</td></tr>
+    </table>
+
+    <div class="callout">
+        <strong>Why <code>EmbedBatchAsync</code> for a single query?</strong> Code reuse. The same method handles both ingestion (batches of 16 documents) and retrieval (single query). The <code>.OrderBy(index)</code> ensures the response array order matches the input order, since the API may return embeddings out of order.
+    </div>
+</div>
+
+
+<!-- ═══ STEP 5 ═══ -->
+<div class="section" id="step5">
+    <div class="step-header">
+        <div class="step-num">5</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Tenant-Filtered Load from SQLite</h2>
+            <div class="step-meta"><strong>RagService.cs</strong> &mdash; <code>SearchAsync()</code>, lines 15&ndash;18</div>
+        </div>
+    </div>
+
+    <p>Load <strong>only this company&rsquo;s chunks</strong> from the database. This is the first line of tenant isolation &mdash; Company A&rsquo;s documents are never even loaded into memory when Company B&rsquo;s user searches.</p>
+
+<pre><code class="language-csharp">// RagService.cs — load company chunks
+var chunks = await db.DocumentChunks
+    .Where(c => c.CompanyId == companyId)       // TENANT ISOLATION
+    .Select(c => new { c.Title, c.Content, c.Source, c.Embedding })
+    .ToListAsync(ct);</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Detail</th><th>Why</th></tr>
+        <tr><td><code>.Where(CompanyId == companyId)</code></td><td>Pre-filter: only this company&rsquo;s chunks leave the database. Zero data leakage.</td></tr>
+        <tr><td><code>.Select(new { ... })</code></td><td>Project only the columns we need &mdash; avoids loading the full <code>Company</code> navigation property</td></tr>
+        <tr><td><code>.ToListAsync()</code></td><td>Loads all chunks into memory for in-process similarity scoring</td></tr>
+    </table>
+
+    <div class="callout-warn callout">
+        <strong>Scaling note:</strong> Loading all chunks into memory works fine for our seed data (~18 chunks, ~12 KB each). At enterprise scale (thousands of documents per company), you&rsquo;d replace this with a vector database (pgvector, Qdrant, Pinecone) that does the similarity search in the database itself, still filtered by CompanyId.
+    </div>
+
+    <p>Graceful empty handling:</p>
+<pre><code class="language-csharp">if (chunks.Count == 0)
+{
+    logger.LogWarning("No document chunks found for CompanyId {CompanyId}", companyId);
+    return "No knowledge base documents found for this company.";
+}</code></pre>
+</div>
+
+
+<!-- ═══ STEP 6 ═══ -->
+<div class="section" id="step6">
+    <div class="step-header">
+        <div class="step-num">6</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Cosine Similarity &mdash; Rank by Relevance</h2>
+            <div class="step-meta"><strong>RagService.cs</strong> &mdash; <code>CosineSimilarity()</code>, lines 41&ndash;51</div>
+        </div>
+    </div>
+
+    <p>For each chunk, deserialize the stored embedding from <code>byte[]</code> back to <code>float[]</code>, then compute cosine similarity against the query vector:</p>
+
+<pre><code class="language-csharp">// RagService.cs — score and rank
+var results = chunks
+    .Select(c => new
+    {
+        c.Title,
+        c.Content,
+        c.Source,
+        Score = CosineSimilarity(
+            queryVec,
+            EmbeddingService.DeserializeEmbedding(c.Embedding))
+    })
+    .OrderByDescending(r => r.Score)
+    .Take(topK);   // default topK = 3</code></pre>
+
+    <h3>The Cosine Similarity Formula</h3>
+    <p>Measures the angle between two vectors. 1.0 = identical direction (perfect match), 0.0 = orthogonal (no relation), -1.0 = opposite.</p>
+
+<pre><code class="language-csharp">private static float CosineSimilarity(float[] a, float[] b)
+{
+    float dot = 0, normA = 0, normB = 0;
+    for (int i = 0; i &lt; a.Length; i++)
+    {
+        dot   += a[i] * b[i];       // dot product
+        normA += a[i] * a[i];       // squared magnitude of A
+        normB += b[i] * b[i];       // squared magnitude of B
+    }
+    return dot / (MathF.Sqrt(normA) * MathF.Sqrt(normB));
+}
+
+// Formula: cos(&theta;) = (A &middot; B) / (||A|| &times; ||B||)
+// - Dot product measures how aligned the vectors are
+// - Division by magnitudes normalizes it to [-1, 1]</code></pre>
+
+    <div class="card">
+        <div class="card-title">Example Scoring</div>
+        <table class="kv-table">
+            <tr><th>Document</th><th>Score</th><th>Why</th></tr>
+            <tr><td>Chicken Biryani recipe</td><td><strong>0.87</strong></td><td>Directly about chicken biryani with allergen info</td></tr>
+            <tr><td>Veg Thali recipe</td><td>0.42</td><td>Also food, but different dish</td></tr>
+            <tr><td>Samosa recipe</td><td>0.38</td><td>Related (food item) but less relevant</td></tr>
+            <tr><td>Operating Hours policy</td><td>0.15</td><td>Completely unrelated topic</td></tr>
+        </table>
+        <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">Top-3 returns the biryani recipe, veg thali, and samosa. The policy is excluded because it scores too low.</p>
+    </div>
+
+    <div class="callout">
+        <strong>Why not Euclidean distance?</strong> Cosine similarity compares <em>direction</em>, not magnitude. Two documents about &ldquo;chicken biryani&rdquo; of different lengths will have different magnitudes but similar directions. Cosine handles this naturally. For normalized embeddings (which OpenAI provides), cosine similarity and dot product are equivalent.
+    </div>
+</div>
+
+
+<!-- ═══ STEP 7 ═══ -->
+<div class="section" id="step7">
+    <div class="step-header">
+        <div class="step-num">7</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Format &amp; Return to Claude</h2>
+            <div class="step-meta"><strong>RagService.cs</strong> &mdash; <code>SearchAsync()</code>, lines 37&ndash;38</div>
+        </div>
+    </div>
+
+    <p>The top-K results are formatted into a single string that becomes the <code>tool_result</code> sent back to Claude:</p>
+
+<pre><code class="language-csharp">return string.Join("\n\n", results.Select(r =>
+    $"[{r.Source}: {r.Title}] (relevance: {r.Score:F2})\n{r.Content}"));</code></pre>
+
+    <p>This produces:</p>
+
+<pre><code class="language-json">[recipe: Chicken Biryani] (relevance: 0.87)
+Chicken Biryani: Fragrant basmati rice layered with marinated chicken,
+yogurt, ginger-garlic paste, and aromatic spices (red chilli, turmeric,
+garam masala, mint). Garnished with fried onions and fresh coriander.
+Contains: dairy (yogurt in marinade), tree nuts (none).
+Allergens: dairy. Does NOT contain nuts.
+Calories: ~450 per serving. Prep time: 45 min.
+
+[recipe: Veg Thali] (relevance: 0.42)
+Veg Thali: A complete vegetarian meal...
+
+[recipe: Samosa] (relevance: 0.38)
+Samosa: Crispy deep-fried pastry...</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Format element</th><th>Purpose</th></tr>
+        <tr><td><code>[recipe: Chicken Biryani]</code></td><td>Source type + title &mdash; Claude can cite this in its answer</td></tr>
+        <tr><td><code>(relevance: 0.87)</code></td><td>Score &mdash; Claude can prioritize higher-relevance chunks</td></tr>
+        <tr><td>Content block</td><td>The actual text Claude reads to answer the question</td></tr>
+        <tr><td><code>\n\n</code> separator</td><td>Clear separation between chunks for Claude&rsquo;s parsing</td></tr>
+    </table>
+
+    <div class="callout-green callout">
+        <strong>The format matters.</strong> Including the source label lets Claude say &ldquo;According to the Chicken Biryani recipe...&rdquo; in its answer. Including the relevance score lets Claude weigh conflicting information (a 0.87 match is more trustworthy than a 0.38 match). This is cheap provenance metadata that improves answer quality.
+    </div>
+</div>
+
+
+<!-- ═══ STEP 8 ═══ -->
+<div class="section" id="step8">
+    <div class="step-header">
+        <div class="step-num">8</div>
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">Claude Generates a Grounded Answer</h2>
+            <div class="step-meta"><strong>ClaudeApiService.cs</strong> &mdash; The tool_result enters Claude&rsquo;s context, and it answers from the data.</div>
+        </div>
+    </div>
+
+    <p>The agentic loop sends the retrieval results back to Claude as a <code>tool_result</code> message:</p>
+
+<pre><code class="language-json">{
+  "role": "user",
+  "content": [
+    {
+      "type": "tool_result",
+      "tool_use_id": "toolu_01abc...",
+      "content": "[recipe: Chicken Biryani] (relevance: 0.87)\nChicken Biryani: ... Does NOT contain nuts.\n\n[recipe: Veg Thali] ..."
+    }
+  ]
+}</code></pre>
+
+    <p>Claude now has the actual recipe data in its context. It reads the retrieved content and generates:</p>
+
+    <div class="card">
+        <div class="card-title">Claude&rsquo;s Response</div>
+        <p style="font-style: italic; color: var(--accent3);">&ldquo;No, the chicken biryani does not contain nuts. It&rsquo;s made with basmati rice, chicken marinated in yogurt, ginger-garlic paste, and spices (red chilli, turmeric, garam masala, mint). The only allergen is dairy from the yogurt in the marinade. It&rsquo;s garnished with fried onions and coriander.&rdquo;</p>
+    </div>
+
+    <div class="callout">
+        <strong>Grounded, not hallucinated.</strong> Without RAG, Claude would guess from training data &mdash; &ldquo;biryani often includes cashews&rdquo; (wrong for our recipe). With RAG, it reads the actual recipe that says &ldquo;tree nuts (none). Does NOT contain nuts.&rdquo; The answer is <em>traceable</em> to a specific document in the knowledge base.
+    </div>
+
+    <p>The response streams to the Angular client via SSE:</p>
+
+    <table class="kv-table">
+        <tr><th>SSE Event</th><th>When</th><th>What the user sees</th></tr>
+        <tr><td><code>tool_start</code></td><td>Claude calls <code>search_knowledge</code></td><td>&ldquo;Searching knowledge base...&rdquo;</td></tr>
+        <tr><td><code>tool_done</code></td><td>RagService returns results</td><td>Spinner stops</td></tr>
+        <tr><td><code>text_delta</code></td><td>Claude generates answer</td><td>Text appears word by word</td></tr>
+    </table>
+</div>
+
+
+<!-- ═══ WHY TOOL-DRIVEN ═══ -->
+<div class="section" id="why-tool">
+    <h2>Why Tool-Driven, Not Always-On?</h2>
+
+    <p>Some RAG systems run retrieval on <em>every</em> user message. We don&rsquo;t. Claude decides when to search. Here&rsquo;s why:</p>
+
+    <table class="kv-table">
+        <tr><th>User message</th><th>Needs RAG?</th><th>What happens</th></tr>
+        <tr><td>&ldquo;Show me today&rsquo;s menu&rdquo;</td><td>No</td><td>Claude calls <code>get_today_menu</code> (structured data)</td></tr>
+        <tr><td>&ldquo;Place an order for 2 biryanis&rdquo;</td><td>No</td><td>Claude calls <code>place_order</code> (action)</td></tr>
+        <tr><td>&ldquo;Does biryani have nuts?&rdquo;</td><td><strong>Yes</strong></td><td>Claude calls <code>search_knowledge</code> (retrieval)</td></tr>
+        <tr><td>&ldquo;What are the canteen hours?&rdquo;</td><td><strong>Yes</strong></td><td>Claude calls <code>search_knowledge</code> (retrieval)</td></tr>
+        <tr><td>&ldquo;Hello!&rdquo;</td><td>No</td><td>Claude responds directly (no tool)</td></tr>
+    </table>
+
+    <h3>Benefits</h3>
+    <ul>
+        <li><strong>Saves embedding API calls</strong> &mdash; &ldquo;Place an order&rdquo; doesn&rsquo;t waste a ~50ms embedding request</li>
+        <li><strong>Saves Claude context window</strong> &mdash; irrelevant chunks don&rsquo;t eat into the 1024 max_tokens budget</li>
+        <li><strong>Better answers</strong> &mdash; Claude isn&rsquo;t confused by retrieved chunks about allergens when the user just wants to order</li>
+        <li><strong>Transparent</strong> &mdash; the SSE events show the user &ldquo;Searching knowledge base...&rdquo; only when it actually searches</li>
+    </ul>
+</div>
+
+
+<!-- ═══ TENANT ISOLATION ═══ -->
+<div class="section" id="tenant">
+    <h2>Tenant Isolation Deep-Dive</h2>
+
+    <p>Tenant isolation is enforced at <strong>three levels</strong>:</p>
+
+    <table class="kv-table">
+        <tr><th>Level</th><th>Where</th><th>How</th></tr>
+        <tr><td>1. Authentication</td><td>JWT token</td><td><code>companyId</code> claim extracted from the signed JWT &mdash; can&rsquo;t be forged</td></tr>
+        <tr><td>2. Database query</td><td><code>RagService.SearchAsync</code></td><td><code>WHERE CompanyId == companyId</code> &mdash; pre-filter before loading</td></tr>
+        <tr><td>3. Schema constraint</td><td><code>CanteenDbContext</code></td><td>Unique index on <code>(CompanyId, ContentHash)</code> + foreign key with Restrict delete</td></tr>
+    </table>
+
+    <div class="callout">
+        <strong>Pre-filter, not post-filter.</strong> Company A&rsquo;s chunks are never loaded into memory when Company B&rsquo;s user searches. The <code>WHERE</code> clause runs in SQLite before any data leaves the database. Even if the similarity scoring code had a bug, it couldn&rsquo;t leak cross-company data because the data was never in scope.
+    </div>
+
+<pre><code class="language-csharp">// This is NOT what we do (post-filter — data leakage risk):
+var allChunks = await db.DocumentChunks.ToListAsync();  // BAD: loads everything
+var results = allChunks
+    .Where(c => c.CompanyId == companyId)  // filters AFTER loading all companies
+    .Select(c => new { ... });
+
+// This IS what we do (pre-filter — tenant isolation):
+var chunks = await db.DocumentChunks
+    .Where(c => c.CompanyId == companyId)  // filters IN the database
+    .Select(c => new { ... })
+    .ToListAsync();</code></pre>
+</div>
+
+
+<!-- ═══ SERIALIZATION ═══ -->
+<div class="section" id="serialization">
+    <h2>Serialization: float[] &harr; byte[]</h2>
+
+    <p>SQLite stores embeddings as <code>BLOB</code> columns. We need to convert between <code>float[]</code> (what the API returns and what math uses) and <code>byte[]</code> (what SQLite stores):</p>
+
+<pre><code class="language-csharp">// EmbeddingService.cs — zero-copy via Buffer.BlockCopy
+
+// float[] → byte[] (for storing after ingestion)
+public static byte[] SerializeEmbedding(float[] embedding)
+{
+    var bytes = new byte[embedding.Length * sizeof(float)];  // 3072 × 4 = 12,288 bytes
+    Buffer.BlockCopy(embedding, 0, bytes, 0, bytes.Length);
+    return bytes;
+}
+
+// byte[] → float[] (for retrieval-time comparison)
+public static float[] DeserializeEmbedding(byte[] bytes)
+{
+    var floats = new float[bytes.Length / sizeof(float)];    // 12,288 / 4 = 3072 floats
+    Buffer.BlockCopy(bytes, 0, floats, 0, bytes.Length);
+    return floats;
+}</code></pre>
+
+    <table class="kv-table">
+        <tr><th>Detail</th><th>Value</th></tr>
+        <tr><td>Storage per chunk</td><td>3072 floats &times; 4 bytes = <strong>12 KB</strong></td></tr>
+        <tr><td>Method</td><td><code>Buffer.BlockCopy</code> &mdash; direct memory copy, no serialization overhead</td></tr>
+        <tr><td>Static methods</td><td>No instance state needed &mdash; pure conversion functions</td></tr>
+    </table>
+
+    <div class="callout">
+        <strong>Why not JSON?</strong> Storing 3072 floats as a JSON array would take ~40 KB (numbers as text with commas). The binary BLOB is 12 KB &mdash; 3.3&times; smaller &mdash; and <code>Buffer.BlockCopy</code> is O(1) versus JSON parsing which is O(n). For 18 chunks the difference is negligible; for 10,000 it&rsquo;s meaningful.
+    </div>
+</div>
+
+
+<!-- ═══ INTERVIEW ═══ -->
+<div class="section" id="interview">
+    <h2>Interview Talking Points</h2>
+
+    <div class="card">
+        <div class="card-title">Retrieval One-Liner</div>
+        <p style="font-size: 16px; line-height: 1.8;">
+            &ldquo;Retrieval is tool-driven: Claude decides when a question needs document search, calls
+            <code>search_knowledge</code> through the same agentic dispatch as ordering, which embeds the query
+            via Azure OpenAI, runs cosine similarity over the company&rsquo;s chunks with a <code>CompanyId</code>
+            pre-filter for tenant isolation, and returns the top-3 results as context so Claude generates
+            grounded answers instead of hallucinating.&rdquo;
+        </p>
+    </div>
+
+    <h3>Likely Follow-Up Questions</h3>
+
+    <div class="card">
+        <div class="card-title">Q: Why tool-driven instead of always-on retrieval?</div>
+        <p>&ldquo;Place an order for 2 biryanis&rdquo; doesn&rsquo;t need RAG. By making retrieval a tool, Claude decides when to search. This avoids wasting embedding API calls, keeps the context window clean for non-knowledge queries, and shows the user transparent feedback (&ldquo;Searching...&rdquo;) only when it actually searches.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Q: How do you prevent cross-company data leakage?</div>
+        <p>Three levels: JWT carries the <code>companyId</code> claim (can&rsquo;t forge), the database query pre-filters with <code>WHERE CompanyId == companyId</code> (data never leaves SQLite), and the schema has a unique index on <code>(CompanyId, ContentHash)</code>. It&rsquo;s a pre-filter, not a post-filter &mdash; chunks from other companies are never loaded into memory.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Q: Why cosine similarity instead of Euclidean distance?</div>
+        <p>Cosine compares direction, not magnitude. Two documents about &ldquo;chicken biryani&rdquo; of different lengths have different magnitudes but similar directions. For normalized embeddings (which OpenAI provides), cosine similarity and dot product are mathematically equivalent.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Q: How would you scale this beyond SQLite?</div>
+        <p>Replace the in-memory similarity loop with a vector database (pgvector, Qdrant, or Pinecone) that does approximate nearest neighbor search in the database itself, still filtered by CompanyId. The <code>RagService.SearchAsync</code> interface stays the same &mdash; only the implementation changes from &ldquo;load all + LINQ&rdquo; to a parameterized vector query.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Q: What happens if the knowledge base has nothing relevant?</div>
+        <p>Two cases: (1) no chunks at all for the company &rarr; returns &ldquo;No knowledge base documents found&rdquo; and Claude tells the user; (2) chunks exist but all score low &rarr; Claude still gets them but recognizes they&rsquo;re not useful and says &ldquo;I don&rsquo;t have specific information about that.&rdquo; Claude&rsquo;s judgment handles the threshold, not a hardcoded cutoff.</p>
+    </div>
+</div>
+
+</div>
+</body>
+</html>

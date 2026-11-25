@@ -1,0 +1,42 @@
+[
+  {
+    "companyId": 1,
+    "title": "Operating Hours",
+    "content": "Canteen Operating Hours: The TechCorp canteen is open Monday to Friday, 8:00 AM to 6:00 PM. Breakfast is served from 8:00 AM to 10:00 AM. Lunch service runs from 12:00 PM to 2:30 PM. Evening snacks and beverages are available from 4:00 PM to 6:00 PM. The canteen is closed on weekends and public holidays. Orders placed after 2:00 PM for lunch will not be accepted."
+  },
+  {
+    "companyId": 1,
+    "title": "Order and Cancellation Policy",
+    "content": "Order and Cancellation Policy: Orders can be placed through the app or at the counter. Once an order status moves to 'Preparing', it cannot be cancelled. Orders in 'Placed' status can be cancelled within 5 minutes. Refunds for cancelled orders are credited back to the employee's account within 24 hours. Maximum order limit is 5 items per order to ensure availability for all employees."
+  },
+  {
+    "companyId": 1,
+    "title": "Allergen and Dietary Information",
+    "content": "Allergen and Dietary Information: All menu items are labelled with allergen information including gluten, dairy, nuts, soy, and fish. Employees with severe allergies should inform the canteen staff directly. The kitchen handles all major allergens and cross-contamination is possible despite best efforts. Vegetarian and non-vegetarian items are prepared in separate areas. Jain meals (no onion, no garlic) can be requested 24 hours in advance."
+  },
+  {
+    "companyId": 1,
+    "title": "Payment and Billing",
+    "content": "Payment and Billing: All canteen transactions are cashless. Payment is deducted from the employee's monthly canteen wallet, which is loaded via payroll deduction. The default monthly wallet amount is Rs 3000. Employees can top up their wallet through the app. Monthly statements are available in the app under Order History. GST of 5% is included in all displayed prices."
+  },
+  {
+    "companyId": 1,
+    "title": "Hygiene and Food Safety",
+    "content": "Hygiene and Food Safety: The canteen follows FSSAI guidelines for food preparation and storage. Kitchen staff undergo monthly health checkups. Food is prepared fresh daily — no items are carried over from the previous day. Temperature logs are maintained for all refrigerated items. Hand sanitizers are available at the entrance. Employees are requested to return used plates and cutlery to the designated counter."
+  },
+  {
+    "companyId": 2,
+    "title": "Operating Hours",
+    "content": "Canteen Operating Hours: The DesignStudio canteen is open Monday to Saturday, 9:00 AM to 7:00 PM. Continental breakfast is served from 9:00 AM to 11:00 AM. Lunch service runs from 12:30 PM to 3:00 PM. The coffee bar and snack counter remain open throughout operating hours. Saturday hours are 10:00 AM to 4:00 PM with a limited menu."
+  },
+  {
+    "companyId": 2,
+    "title": "Order and Cancellation Policy",
+    "content": "Order and Cancellation Policy: Orders must be placed through the app. Walk-in counter orders are accepted only when the app is under maintenance. Orders can be cancelled anytime before the status changes to 'Preparing'. No refunds for partially consumed meals. Special dietary requests (gluten-free, vegan substitutions) must be noted in the order comments. Maximum 3 items per order during peak lunch hours (12:30 PM - 1:30 PM)."
+  },
+  {
+    "companyId": 2,
+    "title": "Sustainability Policy",
+    "content": "Sustainability Policy: DesignStudio canteen is committed to sustainability. All packaging is biodegradable or compostable. Single-use plastics are not used. Employees bringing their own containers receive a Rs 10 discount per order. Food waste is composted on-site. Leftover food at end of day is donated to local shelters through our partnership with FeedIndia. Menu items are sourced from local organic farms where possible."
+  }
+]

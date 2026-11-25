@@ -24,6 +24,9 @@ builder.Services.AddSingleton(_ =>
     return new Anthropic.AnthropicClient() { ApiKey = apiKey };
 });
 builder.Services.AddSingleton<ClaudeApiService>();
+builder.Services.AddSingleton<EmbeddingService>();
+builder.Services.AddSingleton<RagService>();
+builder.Services.AddHostedService<RagIngestionService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<AnalyticsService>();
 
